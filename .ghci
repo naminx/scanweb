@@ -1,0 +1,36 @@
+-- Colorizing and pretty-printing ghci output
+-- requires: pretty-simple
+:set -interactive-print=Text.Pretty.Simple.pPrint
+
+-- green bold lambdas and multiline mode
+:set prompt "\ESC[0;33m%s\ESC[m\n\x03BB> "
+:set prompt-cont "\ESC[0;33m%s\ESC[m\n\x03BB> "
+
+-- useful flags
+:set +m
+:set +t
+
+-- useful extensions by default
+:def ext-on \_ -> return (":set -XBangPatterns -XBinaryLiterals -XConstraintKinds -XDataKinds -XDefaultSignatures -XDeriveDataTypeable -XDeriveFoldable -XDeriveFunctor -XDeriveGeneric -XDeriveTraversable -XDoAndIfThenElse -XEmptyDataDecls -XExistentialQuantification -XFlexibleContexts -XFlexibleInstances -XFunctionalDependencies -XGADTs -XGeneralizedNewtypeDeriving -XInstanceSigs -XKindSignatures -XLambdaCase -XMultiParamTypeClasses -XMultiWayIf -XNamedFieldPuns -XNoImplicitPrelude -XOverloadedStrings -XPartialTypeSignatures -XPatternGuards -XPolyKinds -XQuasiQuotes -XRankNTypes -XRecordWildCards -XScopedTypeVariables -XStandaloneDeriving -XTemplateHaskell -XTupleSections -XTypeApplications -XTypeFamilies -XTypeSynonymInstances -XViewPatterns")
+:def ext-off \_ -> return (":set -XNoBangPatterns -XNoBinaryLiterals -XNoConstraintKinds -XNoDataKinds -XNoDefaultSignatures -XNoDeriveDataTypeable -XNoDeriveFoldable -XNoDeriveFunctor -XNoDeriveGeneric -XNoDeriveTraversable -XNoDoAndIfThenElse -XNoEmptyDataDecls -XNoExistentialQuantification -XNoFlexibleContexts -XNoFlexibleInstances -XNoFunctionalDependencies -XNoGADTs -XNoGeneralizedNewtypeDeriving -XNoInstanceSigs -XNoKindSignatures -XNoLambdaCase -XNoMultiParamTypeClasses -XNoMultiWayIf -XNoNamedFieldPuns -XNoImplicitPrelude -XNoOverloadedStrings -XNoPartialTypeSignatures -XNoPatternGuards -XNoPolyKinds -XNoQuasiQuotes -XNoRankNTypes -XNoRecordWildCards -XNoScopedTypeVariables -XNoStandaloneDeriving -XNoTemplateHaskell -XNoTupleSections -XNoTypeApplications -XNoTypeFamilies -XNoTypeSynonymInstances -XNoViewPatterns")
+:ext-on
+
+:set -Wall
+:set -Wcompat
+:set -Widentities
+:set -Wincomplete-record-updates
+:set -Wincomplete-uni-patterns
+:set -Wpartial-fields
+:set -Wredundant-constraints
+:set -Wno-type-defaults
+
+-- useful default imports
+-- import Data.Kind (Type, Constraint)
+import RIO hiding (ASetter, ASetter', Getting, Lens, Lens', SimpleGetter, lens, many, over, preview, set, sets, some, to, view, (%~), (.~), (^.), (^..), (^?))
+
+-- helpful macros
+:def package \m -> return $ ":! ghc-pkg --simple-output find-module " ++ m
+:def no-pretty \_ -> return (":set -interactive-print=System.IO.print")
+:def rr \_ -> return ":script .ghci"
+
+:set editor vi
