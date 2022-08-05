@@ -30,8 +30,9 @@
           name = "scanweb";
           buildTools = hp: {
             inherit (pkgs)
-              chromedriver
-              chromium;
+#             chromedriver
+#             chromium;
+              chromiumDev;
             inherit (hp)
               fourmolu;
           };

@@ -8,7 +8,18 @@ module App.Config.Windows where
 
 #if defined(mingw32_HOST_OS)
 
-import Path (Abs, Dir, File, Path, absdir, absfile, fromAbsDir, fromAbsFile)
+import Path (
+    Abs,
+    Dir,
+#if __GLASGOW_HASKELL__ < 900
+    File,
+#endif
+    Path,
+    absdir,
+    absfile,
+    fromAbsDir,
+    fromAbsFile,
+ )
 import RIO
 
 

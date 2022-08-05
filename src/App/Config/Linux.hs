@@ -29,6 +29,6 @@ chromeExe :: FilePath
 chromeExe =
     fromString $
         fromAbsFile
-            [absfile|/nix/store/2hdz38z8sppg7ncvds8j6gfdpqivqi90-chromium-103.0.5060.53/bin/chromium|]
+            [absfile|/nix/store/h45fj64wjszcbc160pr2f32lgdci6kry-chromium-dev-104.0.5112.12/bin/chromium|]
 
 #endif
