@@ -5,7 +5,6 @@
 
 module App.Config.Windows where
 
-
 #if defined(mingw32_HOST_OS)
 
 import Path (
@@ -25,7 +24,7 @@ import RIO
 
 defaultRootDir :: Path Abs Dir
 defaultRootDir =
-    [absdir|N:\Documents\Comics\|]
+    [absdir|M:\Documents\Comics\|]
 
 
 userDataDir :: IsString s => s

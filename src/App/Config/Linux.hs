@@ -5,7 +5,6 @@
 
 module App.Config.Linux where
 
-
 #if defined(mingw32_HOST_OS)
 #else
 
@@ -15,7 +14,7 @@ import RIO
 
 defaultRootDir :: Path Abs Dir
 defaultRootDir =
-    [absdir|/mnt/n/Documents/Comics/|]
+    [absdir|/mnt/m/Documents/Comics/|]
 
 
 userDataDir :: IsString s => s
