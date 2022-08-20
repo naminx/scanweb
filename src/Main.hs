@@ -40,7 +40,6 @@ import Text.Taggy.Lens
 import Text.URI.QQ (uri)
 import Web.Api.WebDriver as WD
 
-
 -- This function is here only to suppress warnings.
 _dummy :: Void
 _dummy =
@@ -49,7 +48,6 @@ _dummy =
         ("" ^.. Text.Taggy.Lens.html)
         (pPrint (0 :: Int) :: IO ())
         [uri||]
-
 
 main :: IO ()
 main = bracket_
@@ -78,7 +76,6 @@ main = bracket_
                         runRIO myApp $ do
                             setupEnv
                             getProg $ cliOptions ^. appMode
-
 
 getProg ::
     forall env s.

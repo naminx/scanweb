@@ -802,6 +802,7 @@ waitUntilVisible elemId = do
             <> ".display !== 'none'"
 --}
 
+
 -- Wait until `condition :: Text` is `True`.
 waitUntilJS :: forall env s. (HasStateRef s env, HasApp s) => Text -> RIO env ()
 waitUntilJS condition = do
