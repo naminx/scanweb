@@ -21,7 +21,6 @@ import App.Config
 import Database.Persist.Sqlite hiding (LogFunc)
 import Database.Sqlite (open)
 import Import
-import Network.Wreq.Session (Session)
 import Path (Abs, File, Path, toFilePath)
 import qualified RIO.Map as Map (empty)
 import RIO.Process
@@ -53,16 +52,15 @@ newSqlBackend dbFilePath = do
     defaultLogFunc = \_ _ _ _ -> return ()
 
 
-initApp :: LogFunc -> ProcessContext -> Options -> SqlBackend -> Session -> SessionId -> App
-initApp logFunction procContext cliOptions sqlBackend sess wdSess =
+initApp :: LogFunc -> ProcessContext -> Options -> SqlBackend -> SessionId -> App
+initApp logFunction procContext cliOptions sqlBackend wdSess =
     App
         { _logFunc = logFunction
         , _processContext = procContext
         , _options = cliOptions
-        , _currentWeb = RawDevArt
+        , _currentWeb = RawDevArtCom
         , _currentPage = Page 1
         , _currentSqlBackend = sqlBackend
-        , _currentWrqSession = sess
         , _webTable = Map.empty
         , _domainTable = Map.empty
         , _comicTable = Map.empty

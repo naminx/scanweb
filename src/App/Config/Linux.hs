@@ -21,13 +21,16 @@ userDataDir :: IsString s => s
 userDataDir =
     fromString $
         fromAbsDir
-            [absdir|/home/namin/.config/chromium/|]
+--          [absdir|/home/namin/.config/chromium/|]
+            [absdir|/home/namin/.config/google-chrome|]
 
 
 chromeExe :: FilePath
 chromeExe =
     fromString $
         fromAbsFile
-            [absfile|/nix/store/h45fj64wjszcbc160pr2f32lgdci6kry-chromium-dev-104.0.5112.12/bin/chromium|]
+--          [absfile|/run/current-system/sw/bin/chromium|]
+            [absfile|/run/current-system/sw/bin/google-chrome-stable|]
+
 
 #endif

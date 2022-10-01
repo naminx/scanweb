@@ -4,6 +4,7 @@ module Lib (
     module Lib.Console,
     module Lib.Extra,
     module Lib.Lens,
+    module Lib.MIME,
     module Lib.Megaparsec,
     module Lib.RIO,
     module Lib.Taggy,
@@ -14,6 +15,7 @@ module Lib (
 import Lib.Console
 import Lib.Extra
 import Lib.Lens
+import Lib.MIME
 import Lib.Megaparsec
 import Lib.RIO
 import Lib.Taggy

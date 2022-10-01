@@ -6,6 +6,7 @@
 module Web.Common.WeLoveManga where
 
 import App.Chapter
+import Data.Char (isSpace)
 import Import
 import qualified RIO.Text as T
 import Text.Megaparsec.Char (string)
@@ -15,6 +16,7 @@ import Text.URI.Lens (queryParam, uriQuery)
 import Text.URI.QQ (queryKey, uri)
 import Web.Common
 
+-- import Debug.Trace
 
 newReleaseUrl :: MonadThrow m => Page Int -> m URI
 newReleaseUrl (Page n)
@@ -25,10 +27,8 @@ newReleaseUrl (Page n)
             [uri|/manga-list.html?listType=pagination&page=&artist=&author=&group=&m_status=&name=&genre=&ungenre=&magazine=&sort=last_update&sort_type=DESC|]
                 & uriQuery . queryParam [queryKey|page|] .~ pageNo
 
-
 keyElement :: Text
 keyElement = "a.navbar-brand[href='/']"
-
 
 focusComics :: Fold Node (Try (URI, Maybe ReleaseInfo))
 focusComics = divThumbItemFlow . liftFold2 (liftA2 (,)) comics relInfo
@@ -50,10 +50,8 @@ focusComics = divThumbItemFlow . liftFold2 (liftA2 (,)) comics relInfo
         divChapterTitle = allNamed (only "div") . attributed (hasClass "chapter-title")
         mkChapterNo = parseEither $ string "Chap " >> comicChapter
 
-
 focusLatestRelInfo :: Fold Node (Try URI)
 focusLatestRelInfo = focusLatestRelInfo' "Read the last chapter"
-
 
 focusLatestRelInfo' :: Text -> Fold Node (Try URI)
 focusLatestRelInfo' latestLabel =
@@ -62,7 +60,6 @@ focusLatestRelInfo' latestLabel =
     anchorBtnDanger = anchor . attributed (hasClass "btn-danger")
     filterLastChap = filtered $ view (contents . to T.strip) >>> (== latestLabel)
     hrefToURI = attr "href" . tryParseURI
-
 
 focusRelInfos :: Fold Node (Try (ReleaseInfo, URI))
 focusRelInfos =
@@ -78,7 +75,6 @@ focusRelInfos =
     url :: Fold Element (Try URI)
     url = attr "href" . tryParseURI
 
-
 focusRelInfo :: Fold Node (Try ReleaseInfo)
 focusRelInfo =
     ulChapList . elements . liCurrent . anchor . relInfo
@@ -89,11 +85,10 @@ focusRelInfo =
       where
         mkChapterNo = parseEither $ string "Chapter " >> comicChapter
 
-
 focusImages :: Fold Node (Try URI)
 focusImages =
     divChapterContent . imgChapterImg . url
   where
     divChapterContent = allNamed (only "div") . attributed (hasClass "chapter-content")
     imgChapterImg = allNamed (only "img") . attributed (hasClass "chapter-img")
-    url = attr "src" . to (fmap T.strip) . tryParseURI
+    url = attr "src" . to (fmap (T.filter $ not . isSpace)) . tryParseURI

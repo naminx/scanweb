@@ -23,10 +23,6 @@ import System.Time.Extra (Seconds)
 import Web.Api.WebDriver
 
 
-timestamp :: IsString s => s
-timestamp = __TIMESTAMP__
-
-
 connectionString :: Text
 connectionString =
     "DRIVER=SQLite;"

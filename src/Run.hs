@@ -1,8 +1,8 @@
 {-# LANGUAGE CPP #-}
-#if __GLASGOW_HASKELL__ >= 902
-{-# LANGUAGE OverloadedRecordDot #-}
-#endif
+-- #endif
 {-# LANGUAGE LambdaCase #-}
+-- #if __GLASGOW_HASKELL__ >= 902
+{-# LANGUAGE OverloadedRecordDot #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE RankNTypes #-}
@@ -19,9 +19,11 @@ import App.Types
 import Control.Lens hiding (elements)
 import Data.Aeson (ToJSON (..), Value (..))
 import Data.Aeson.Lens (_Bool, _String)
+import Data.Attoparsec.ByteString (parseOnly)
+import qualified Data.ByteString as BS (writeFile)
 import Data.Monoid (First)
 import qualified Data.Text.Encoding as T (decodeUtf8)
-import qualified Data.Text.IO as T (getLine)
+import qualified Data.Text.IO as T (getLine, writeFile)
 import qualified Data.Text.Internal.Search as T (indices)
 import qualified Data.Text.Lazy.IO as TL (writeFile)
 import Data.Tuple (swap)
@@ -50,8 +52,9 @@ import Formatting.Formatters (int, text)
 import Lib hiding (domain)
 import qualified Lib as URI
 import Network.HTTP.Client (HttpException)
-import Network.Wreq (defaults, header, responseBody, responseHeader)
-import Network.Wreq.Session (getWith)
+
+-- import Network.Wreq (defaults, header, responseBody, responseHeader)
+-- import Network.Wreq.Session (getWith)
 import Path (
     Abs,
     Dir,
@@ -85,18 +88,20 @@ import Web.Api.WebDriver hiding (Page)
 import Prelude (putStrLn)
 
 
-#if __GLASGOW_HASKELL__ >= 902
+-- #if __GLASGOW_HASKELL__ >= 902
 set_ :: PersistEntity val => SqlExpr (Entity val) -> [SqlExpr (Entity val) -> SqlExpr Update] -> SqlQuery ()
-#else
-set_ :: PersistEntity val => SqlExpr (Entity val) -> [SqlExpr (Update val)] -> SqlQuery ()
-#endif
+-- #else
+-- set_ :: PersistEntity val => SqlExpr (Entity val) -> [SqlExpr (Update val)] -> SqlQuery ()
+-- #endif
 set_ = ES.set
 
 
-(.^) :: forall typ val. (PersistEntity val, PersistField typ)
-    => SqlExpr (Entity val)
-    -> EntityField val typ
-    -> SqlExpr (ES.Value typ)
+(.^) ::
+    forall typ val.
+    (PersistEntity val, PersistField typ) =>
+    SqlExpr (Entity val) ->
+    EntityField val typ ->
+    SqlExpr (ES.Value typ)
 (.^) = (ES.^.)
 
 
@@ -183,13 +188,6 @@ updateNewReleases = do
                     <> (vivid Black <> " [" <> T.pack (show page) <> "]")
             newReleaseUrl <- getNewReleaseUrl
             runWd $ navigateToStealth $ render newReleaseUrl
-            -- case page of
-            --     1 -> when (web /= MangaRaw) $ gotoPage $ render newReleaseUrl
-            --     _ -> when (web /= MangaRaw) $ gotoPage $ render newReleaseUrl
-            --     1 -> gotoPage $ render newReleaseUrl
-            --     _ -> do
-            --         anchor <- findElem $ ByCSS $ selectorAnchor newReleaseUrl
-            --         click anchor
             waitForLoaded newReleaseUrl
             markup <- runWd getMarkup
             newReleases <-
@@ -316,11 +314,11 @@ updateComicTableChapter comic chapter_@(Chapter chapter section) = do
         runSqlConn $ do
             update $ \row -> do
                 set_ row [ComicsChapter =. val chapter, ComicsSection =. val section]
-#if __GLASGOW_HASKELL__ >= 902
+                -- #if __GLASGOW_HASKELL__ >= 902
                 where_ $ row.comic ==. val (unComic comic)
-#else
-                where_ $ row .^ ComicsComic ==. val (unComic comic)
-#endif
+            -- #else
+            --  where_ $ row .^ ComicsComic ==. val (unComic comic)
+            -- #endif
             transactionSave
     comicTable . ix comic . _4 .= chapter_
 
@@ -331,11 +329,11 @@ updateComicTableVolume comic volume = do
     flip runSqlConn sqlBackend $
         update $ \row -> do
             set_ row [ComicsVolume =. val (unVolume volume)]
-#if __GLASGOW_HASKELL__ >= 902
+            -- #if __GLASGOW_HASKELL__ >= 902
             where_ $ row.comic ==. val (unComic comic)
-#else
-            where_ $ row .^ ComicsComic ==. val (unComic comic)
-#endif
+    -- #else
+    --             where_ $ row .^ ComicsComic ==. val (unComic comic)
+    -- #endif
     comicTable . ix comic . _3 .= volume
 
 
@@ -402,17 +400,19 @@ openAndDownloadRelease relInfo = do
     runWd $ navigateToStealth $ render comicUrl
     waitForLoaded comicUrl
     markup <- runWd getMarkup
+    {--
     latestChapUrl <- scrapeLatestRelInfo markup
     let newRelease =
             zipWith
                 (curry sequencePair)
                 [Right relInfo]
                 (latestChapUrl ^.. _Just)
+    --}
     targetChapter <-
         scrapeRelInfos markup
-            <&> (<> newRelease)
-            <&> equalsTo relInfo
+            -- <&> (<> newRelease)
             <&> uniqRelease
+            <&> equalsTo relInfo
     let chapters =
             targetChapter
                 & iover (traversed . _Right) (\n (c, u) -> (c, u, u, length targetChapter - n))
@@ -527,7 +527,8 @@ downloadRelease (relInfo, absUrl, _relUrl, _count) = bracketDownloadRelease $ do
         throwM SomeImagesNotDownloaded
     liftIO $ createDirectory $ toFilePath targetFolder
     currentReferer .= absUrl
-    runningFileName <- sequenceA $ parseRelFile . (TL.unpack . format (lpadded 3 '0' int)) <$> [1 .. length images]
+    runningFileName <-
+        sequenceA $ parseRelFile . (TL.unpack . format (lpadded 3 '0' int)) <$> [1 .. length images]
     result <-
         bracketDownloadImages $
             traverse tryDownloadImage $ zip images ((targetFolder </>) <$> runningFileName)
@@ -558,13 +559,25 @@ downloadRelease (relInfo, absUrl, _relUrl, _count) = bracketDownloadRelease $ do
 
     printExceptionEx someException = case fromException someException of
         Just e -> do
-            runSimpleApp $ logWarn $ display $ vivid Yellow <> T.pack (displayException (e :: InvalidImageSubtype))
+            runSimpleApp $
+                logWarn $
+                    display $
+                        vivid Yellow
+                            <> T.pack
+                                ( displayException
+                                    (e :: InvalidImageSubtype)
+                                )
         _ -> printException someException
 
     waitForImagesToLoad = do
         markup <- runWd getMarkup
         images <- scrapeImages markup <&> mapRelativeTo absUrl id
-        if has (folded . _Right . to (not . null . T.indices "image/gif" . render) . filtered (== True)) images
+        if has
+            ( folded . _Right
+                . to (not . null . T.indices "image/gif" . render)
+                . filtered (== True)
+            )
+            images
             then do
                 liftIO $ sleep 1
                 waitForImagesToLoad
@@ -649,7 +662,7 @@ getRandomWaitTime :: forall env s. (HasStateRef s env, HasApp s) => RIO env Seco
 getRandomWaitTime = do
     web <- currentWeb <%= id
     case web of
-        MangaRaw -> randomRIO (minWaitTime, maxWaitTime)
+        SyoSetuMe -> randomRIO (minWaitTime, maxWaitTime)
         _ -> return defaultWaitTime
 
 
@@ -714,22 +727,45 @@ execNewWin codeJS args = do
 
 downloadImage :: forall env s. (HasStateRef s env, HasApp s) => (URI, Path Abs File) -> RIO env ()
 downloadImage (url, filename) = do
-    sess <- currentWrqSession <%= id
-    referer <- currentReferer <%= id
-    let opt = defaults & header "Referer" .~ [renderBs referer]
-    resp <- liftIO $ getWith opt sess $ renderStr url
-    let contentType = T.decodeUtf8 $ resp ^. responseHeader "Content-Type"
-        (mediatype, subcategory) = T.break (== '/') contentType
-    when (mediatype /= "image") $
-        throwM $ InvalidContentType $ T.unpack contentType
-    let ext = drop 1 $ case subcategory of
-            "/jpeg" -> "/jpg"
-            _ -> T.unpack subcategory
-    case addExtension ('.' : ext) filename of
-        Right fullpath -> BL.writeFile (toFilePath fullpath) $ resp ^. responseBody
-        Left _ -> do
-            BL.writeFile (toFilePath filename) $ resp ^. responseBody
-            throwM $ InvalidImageSubtype $ T.unpack subcategory
+    base64 <- runWd $ executeAsyncScript getImage [toJSON $ render url]
+    case parseOnly parseEmbeddedData $ encodeUtf8 $ base64 ^. _String of
+        Right (ext, binaryData) -> case addExtension ("." <> T.unpack ext) filename of
+            Right fullFileName -> liftIO $ BS.writeFile (toFilePath fullFileName) binaryData
+            Left pathError ->
+                throwM $ InvalidContentType $ displayException pathError
+        Left parseError ->
+            throwM $ InvalidContentType parseError
+  where
+    getImage :: Text
+    getImage =
+        [r|
+            const url = arguments[0];
+            const resolve = arguments[arguments.length - 1];
+            const magic = "xmlHttpRequest";
+            const input = document.createElement("input");
+            const uid = () => {
+                const tmp = performance.now().toString(36).replace(/\./g, "");
+                return document.getElementById(tmp) == undefined ? tmp : uid();
+            };
+            input.id = uid();
+            input.type = "hidden";
+            document.querySelectorAll("body")[0].append(input);
+            const handler = () => {
+                input.removeEventListener(input.id, handler);
+                const result = input.value;
+                delete input.id;
+                input.remove();
+                resolve(result);
+            };
+            input.addEventListener(input.id, handler);
+            const location = window.location;
+            const origin = location.protocol + "//" + location.hostname + "/";
+            window.postMessage(JSON.stringify({
+                magic: magic,
+                url: url,
+                id: input.id
+            }), origin);
+        |]
 
 
 updateWebTable :: forall env s. (HasStateRef s env, HasApp s) => Web -> URI -> RIO env ()
@@ -738,12 +774,13 @@ updateWebTable web absUrl = do
     flip runSqlConn sqlBackend $
         update $ \row -> do
             set_ row [WebsSentinel =. val (render absUrl)]
-#if __GLASGOW_HASKELL__ >= 902
+            -- #if __GLASGOW_HASKELL__ >= 902
             where_ $ row.web ==. val (fromEnum web)
-#else
-            where_ $ row .^ WebsWeb ==. val (fromEnum web)
-#endif
 
+
+-- #else
+--             where_ $ row .^ WebsWeb ==. val (fromEnum web)
+-- #endif
 
 -- selectorAnchor [uri|https://manga1000.top/page/2|] == "
 --     document.querySelectorAll (\"
@@ -801,7 +838,6 @@ waitUntilVisible elemId = do
             <> ("(document.getElementById('" <> elemId <> "'))")
             <> ".display !== 'none'"
 --}
-
 
 -- Wait until `condition :: Text` is `True`.
 waitUntilJS :: forall env s. (HasStateRef s env, HasApp s) => Text -> RIO env ()

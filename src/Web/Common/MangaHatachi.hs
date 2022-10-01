@@ -17,7 +17,6 @@ import Text.URI.Lens (uriPath)
 import Text.URI.QQ (uri)
 import Web.Common
 
-
 newReleaseUrl :: MonadThrow m => Page Int -> m URI
 newReleaseUrl (Page n)
     -- This trailing slash is important to flag an ABSOLUTE path.
@@ -27,10 +26,8 @@ newReleaseUrl (Page n)
   where
     pageNo = mkPathPiece $ T.pack $ show n
 
-
 webIdentity :: Text
 webIdentity = "a.logo"
-
 
 focusComics :: Fold Node (Try (URI, Maybe ReleaseInfo))
 focusComics = divMainColInnerCPage . divItemSummary . liftFold2 (liftA2 (,)) comics relInfo
@@ -58,10 +55,8 @@ focusComics = divMainColInnerCPage . divItemSummary . liftFold2 (liftA2 (,)) com
     tryParseRelInfo :: ToLike (Maybe Text) (Try ReleaseInfo)
     tryParseRelInfo = to (maybeToTry ChapterNoNotFound) . to (>>= T.strip >>> mkReleaseInfo)
 
-
 focusLatestRelInfo :: Fold Node (Try URI)
 focusLatestRelInfo = noLatestRelInfo
-
 
 focusRelInfos :: Fold Node (Try (ReleaseInfo, URI))
 focusRelInfos =
@@ -79,6 +74,16 @@ focusRelInfos =
     tryParseRelInfo :: ToLike (Maybe Text) (Try ReleaseInfo)
     tryParseRelInfo = to (maybeToTry ChapterNoNotFound) . to (>>= mkReleaseInfo)
 
+focusRelInfo :: Fold Node (Try ReleaseInfo)
+focusRelInfo =
+    taking 1 selectSingleChapter . optionSelected . relInfo
+  where
+    selectSingleChapter = allNamed (only "select") . attributed (hasClass "single-chapter-select")
+    optionSelected = elements . allNamed (only "option") . attributed (ix "selected" . only "selected")
+
+    relInfo = attr "value" . tryParseChapter mkChapterNo . to (fmap Episode)
+      where
+        mkChapterNo = parseEither $ string "Chapter " >> comicChapter
 
 mkReleaseInfo :: Text -> Try ReleaseInfo
 mkReleaseInfo = parseEither relInfo
@@ -96,7 +101,6 @@ mkReleaseInfo = parseEither relInfo
         endChap <- comicChapter
         _ <- string "話"
         return $ Episodes (beginChap, endChap)
-
 
 focusImages :: Fold Node (Try URI)
 focusImages =

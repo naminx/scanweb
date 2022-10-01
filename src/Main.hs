@@ -19,7 +19,6 @@ import Database.Esqueleto.Experimental hiding ((^.))
 import qualified Database.Esqueleto.Experimental as ES
 import Import hiding (from, on)
 import Init
-import Network.Wreq.Session as Wreq (newSession)
 import Options
 import Path
 import Path (SomeBase (..), (</>))
@@ -32,13 +31,18 @@ import Replace.Megaparsec (anyTill, breakCap)
 import Run (runWdSession)
 import System.Console.ANSI (SGR (..), setSGR)
 import System.Console.ANSI.Types (Color (..))
+import System.Process (CreateProcess (..), StdStream (..), withCreateProcess)
+import qualified System.Process as P
 import System.Time.Extra (sleep)
 import Text.Megaparsec (Parsec, ShowErrorComponent (..), eof, many, parseTest, some, try)
 import Text.Megaparsec.Char (space1, string)
 import Text.Pretty.Simple (pPrint)
+import Text.RawString.QQ (r)
 import Text.Taggy.Lens
+import Text.URI (render)
 import Text.URI.QQ (uri)
 import Web.Api.WebDriver as WD
+
 
 -- This function is here only to suppress warnings.
 _dummy :: Void
@@ -48,6 +52,7 @@ _dummy =
         ("" ^.. Text.Taggy.Lens.html)
         (pPrint (0 :: Int) :: IO ())
         [uri||]
+
 
 main :: IO ()
 main = bracket_
@@ -60,22 +65,36 @@ main = bracket_
                 Rel relFilePath -> cliOptions ^. rootDir </> relFilePath
         appLogOptions <- logOptionsHandle stdout False
         procContext <- mkDefaultProcessContext
-        wrqSess <- Wreq.newSession
         withLogFunc appLogOptions $ \logFunction ->
-            bracket (newSqlBackend dbFilePath) close' $
+            bracket (newSqlBackend dbFilePath) close' $ \conn ->
                 if (cliOptions ^. appMode) `notElem` [ListWebs, ListComics]
-                    then do
-                        \conn -> bracket newWdSession (`runWdSession` deleteSession) $
-                            \wdSess -> do
-                                myApp <- newSomeRef $ initApp logFunction procContext cliOptions conn wrqSess wdSess
-                                runRIO myApp $ do
-                                    setupEnv
-                                    getProg $ cliOptions ^. appMode
-                    else \conn -> do
-                        myApp <- newSomeRef $ initApp logFunction procContext cliOptions conn wrqSess undefined
+                    then withCreateProcess chromedriver_proc $ \_ mb_hout _ _ -> case mb_hout of
+                        Just hout -> do
+                            waitForChromeDriver hout
+                            bracket newWdSession (`runWdSession` deleteSession) $
+                                \wdSess -> do
+                                    myApp <-
+                                        newSomeRef $
+                                            initApp logFunction procContext cliOptions conn wdSess
+                                    runRIO myApp $ do
+                                        setupEnv
+                                        getProg $ cliOptions ^. appMode
+                        Nothing -> return ()
+                    else do
+                        myApp <-
+                            newSomeRef $
+                                initApp logFunction procContext cliOptions conn undefined
                         runRIO myApp $ do
                             setupEnv
                             getProg $ cliOptions ^. appMode
+  where
+    chromedriver_proc = (P.proc "/run/current-system/sw/bin/chromedriver" []) {std_out = CreatePipe}
+    waitForChromeDriver hout = do
+        response <- T.hGetLine hout
+        if response == "ChromeDriver was started successfully."
+            then return ()
+            else waitForChromeDriver hout
+
 
 getProg ::
     forall env s.
@@ -88,3 +107,35 @@ getProg appmode = case appmode of
     DownloadRelease (web, comic, relInfo) -> progDownloadRelease (web, comic, relInfo)
     ListWebs -> progListWebs
     ListComics -> progListComics
+
+
+getImg :: Text
+getImg =
+    [r|
+        const url = arguments[0];
+        const resolve = arguments[arguments.length - 1];
+        const magic = "xmlHttpRequest";
+        const input = document.createElement("input");
+        const uid = () => {
+            const tmp = performance.now().toString(36).replace(/\./g, "");
+            return document.getElementById(tmp) == undefined ? tmp : uid();
+        };
+        input.id = uid();
+        input.type = "hidden";
+        document.querySelectorAll("body")[0].append(input);
+        const handler = () => {
+            input.removeEventListener(input.id, handler);
+            const result = input.value;
+            delete input.id;
+            input.remove();
+            resolve(result);
+        };
+        input.addEventListener(input.id, handler);
+        const location = window.location;
+        const origin = location.protocol + "//" + location.hostname + "/";
+        window.postMessage(JSON.stringify({
+            magic: magic,
+            url: url,
+            id: input.id
+        }), origin);
+    |]

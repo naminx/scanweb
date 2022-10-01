@@ -6,21 +6,24 @@
   };
 
   inputs = {
-    nixpkgs.url = "github:nixos/nixpkgs/nixos-22.05";
+    nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
     flake-parts = {
       url = "github:hercules-ci/flake-parts";
       inputs.nixpkgs.follows = "nixpkgs";
     };
     haskell-flake.url = "github:srid/haskell-flake";
 
+    # script-monad-0.0.4: Override -> dontCheck
     script-monad = {
       url = "github:nbloomf/script-monad/5dbe37b62dbadfd831ffd07c79c1838d391a54a5";
       flake = false;
     };
+    # webdriver-w3c-0.0.3: Override -> dontCheck
     webdriver-w3c = {
       url = "github:nbloomf/webdriver-w3c/788f024f730ec967e93ac3c5d2754ab846fb6ece";
       flake = false;
     };
+    # Updated 7 Apr 2022 to support lens-5.0 but not updated on hackage
     taggy-lens = {
       url = "github:alpmestan/taggy-lens/87235bfb9c3ee8b3d487c1cf48a22f247e59286d";
       flake = false;
@@ -35,7 +38,7 @@
       ];
       perSystem = { pkgs, inputs', self', ... }: {
         haskellProjects.default = {
-          haskellPackages = pkgs.haskell.packages.ghc922;
+          haskellPackages = pkgs.haskell.packages.ghc924;
           root = ./.;
           name = "scanweb";
           buildTools = hp: {

@@ -26,7 +26,6 @@ import Data.WOE (IsoEnum (mapping), WOE (WOE))
 import Database.Esqueleto.Experimental (SqlBackend)
 import Database.Persist.TH (mkPersist, persistLowerCase, share, sqlSettings)
 import Lib
-import Network.Wreq.Session (Session)
 import Path (Abs, Dir, File, Path, Rel, SomeBase, reldir)
 import RIO.Process (HasProcessContext (processContextL), ProcessContext)
 import qualified RIO.Text as T (intercalate, unpack)
@@ -56,15 +55,16 @@ instance Show URL where
 
 
 data Web
-    = MangaRaw
-    | RawDevArt
-    | WeLoMa
-    | WeLoveManga
-    | KlManga
-    | J9Jp
-    | Manga9
-    | SyoSetu
-    | Manga1001
+    = RawDevArtCom
+    | WeLoMaArt
+    | WeLoveMangaOne
+    | KlMangaNet
+    | MangaHatachiCom
+    | SyoSetuMe
+    | J9JpCom
+    | SyoSetuTop
+    | MangaGunCom
+    | Manga9Co
     deriving (Eq, Ord, Bounded, Show, Generic)
     deriving (Enum) via WOE Web
 
@@ -79,15 +79,16 @@ newtype Page a = Page a
 
 instance IsoEnum Web where
     mapping =
-        [ (0, MangaRaw)
-        , (1, RawDevArt)
-        , (2, WeLoMa)
-        , (3, WeLoveManga)
-        , (4, KlManga)
-        , (5, J9Jp)
-        , (6, Manga9)
-        , (7, SyoSetu)
-        , (8, Manga1001)
+        [ (1, RawDevArtCom)
+        , (2, WeLoMaArt)
+        , (3, WeLoveMangaOne)
+        , (4, KlMangaNet)
+        , (5, MangaHatachiCom)
+        , (6, SyoSetuMe)
+        , (7, J9JpCom)
+        , (8, SyoSetuTop)
+        , (9, MangaGunCom)
+        , (10, Manga9Co)
         ]
 
 
@@ -186,7 +187,6 @@ data App = App
       _currentWeb :: !Web
     , _currentPage :: !(Page Int)
     , _currentSqlBackend :: !SqlBackend
-    , _currentWrqSession :: !Session
     , _webTable :: WebTable
     , _domainTable :: DomainTable
     , _comicTable :: ComicTable

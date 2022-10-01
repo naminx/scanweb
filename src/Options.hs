@@ -1,3 +1,5 @@
+{-# LANGUAGE CPP #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE NoImplicitPrelude #-}
 
 module Options where
@@ -16,7 +18,9 @@ import qualified Text.Megaparsec as MP (try)
 import Text.Megaparsec.Char.Lexer (decimal)
 
 
--- import Prelude (succ)
+timestamp :: IsString s => s
+timestamp = __TIMESTAMP__
+
 
 parseOptions :: IO Options
 parseOptions = do
@@ -74,7 +78,7 @@ modeScanWebs =
                 <> long "scan"
                 <> metavar "WEBs"
                 -- <> value [succ (minBound :: Web) .. maxBound :: Web]
-                <> value [RawDevArt .. J9Jp]
+                <> value [RawDevArtCom, WeLoMaArt, WeLoveMangaOne, KlMangaNet, MangaHatachiCom, SyoSetuMe]
                 <> help
                     ( "Scan specified webs (default mode), such as 1-3,5,7-9 "
                         <> "(-w for list of known webs)"

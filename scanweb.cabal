@@ -36,6 +36,7 @@ executable scanweb
       Lib.Extra
       Lib.Lens
       Lib.Megaparsec
+      Lib.MIME
       Lib.RIO
       Lib.Taggy
       Lib.URI
@@ -54,10 +55,11 @@ executable scanweb
       Web.Manga1000.Top
       Web.Manga1001.Top
       Web.Manga9.Co
-      Web.MangaGohan.Me
+      Web.MangaGun.Com
       Web.MangaHatachi.Com
       Web.MangaRaw.Co
       Web.RawDevArt.Com
+      Web.SyoSetu.Me
       Web.SyoSetu.Top
       Web.WeLoMa.Art
       Web.WeLoveManga.One
@@ -68,7 +70,11 @@ executable scanweb
   build-depends:
       aeson
     , ansi-terminal
+    , attoparsec
+    , attoparsec-base64
     , base
+    , base64
+    , bytestring
     , data-default
     , directory
     , esqueleto
@@ -87,6 +93,8 @@ executable scanweb
     , persistent
     , persistent-sqlite
     , pretty-simple
+    , process
+    , purebred-email
     , random
     , raw-strings-qq
     , replace-megaparsec
@@ -98,5 +106,5 @@ executable scanweb
     , text
     , transformers-base
     , webdriver-w3c
-    , wreq
+    , word8
   default-language: Haskell2010
