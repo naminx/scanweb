@@ -5,6 +5,7 @@
 
 module App.Config.Windows where
 
+
 #if defined(mingw32_HOST_OS)
 
 import Path (

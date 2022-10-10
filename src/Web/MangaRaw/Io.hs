@@ -2,7 +2,7 @@
 {-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE NoImplicitPrelude #-}
 
-module Web.Common.Manga1001 where
+module Web.MangaRaw.Io where
 
 import App.Chapter
 import Import
@@ -32,12 +32,13 @@ keyElement = "a[rel='home']"
 
 focusComics :: Fold Node (Try (URI, Maybe ReleaseInfo))
 focusComics =
-    h3EntryTitle . liftFold2 (liftA2 (,)) comics noRelInfo
+    anchorWithH3EntryTitle . liftFold2 (liftA2 (,)) comics noRelInfo
   where
-    h3EntryTitle = allNamed (only "h3") . attributed (hasClass "entry-title")
+    anchorWithH3EntryTitle = allNamed (only "a") . filtered (has h3EntryTitle)
+    h3EntryTitle = elements . named (only "h3") . attributed (hasClass "entry-title")
 
     comics :: ToLike Element (Try URI)
-    comics = to (view $ anchor . attr "href") . tryParseURI
+    comics = to (view $ attr "href") . tryParseURI
 
 
 focusLatestRelInfo :: Fold Node (Try URI)
@@ -46,12 +47,12 @@ focusLatestRelInfo = noLatestRelInfo
 
 focusRelInfos :: Fold Node (Try (ReleaseInfo, URI))
 focusRelInfos =
-    divChapList . backwards (anchor . liftFold2 (liftA2 (,)) relInfo url)
+    backwards (anchorTextInfo . liftFold2 (liftA2 (,)) relInfo url)
   where
-    divChapList = allNamed (only "div") . attributed (hasClass "chaplist")
+    anchorTextInfo = allNamed (only "a") . attributed (hasClass "text-info")
 
-    relInfo :: ToLike Element (Try ReleaseInfo)
-    relInfo = to (preview contents) . tryParseChapter mkChapterNo . to (fmap Episode)
+    relInfo :: Fold Element (Try ReleaseInfo)
+    relInfo = attr "title" . tryParseChapter mkChapterNo . to (fmap Episode)
       where
         mkChapterNo = parseEither $ do
             _ <- anyTill $ string "【第"

@@ -189,6 +189,8 @@ updateNewReleases = do
             newReleaseUrl <- getNewReleaseUrl
             runWd $ navigateToStealth $ render newReleaseUrl
             waitForLoaded newReleaseUrl
+            waitTime <- getRandomWaitTime
+            liftIO $ sleep waitTime
             markup <- runWd getMarkup
             newReleases <-
                 scrapeComics markup
@@ -357,7 +359,7 @@ openAndScanComic = do
     latestChapUrl <- scrapeLatestRelInfo markup
     let newRelease =
             zipWith
-                (curry sequencePair)
+                (liftA2 (,))
                 (maybeRelInfo ^.. _Just . to Right)
                 (latestChapUrl ^.. _Just)
     newReleases <- -- :: RIO env [Try (ReleaseInfo, URI)]
@@ -404,7 +406,7 @@ openAndDownloadRelease relInfo = do
     latestChapUrl <- scrapeLatestRelInfo markup
     let newRelease =
             zipWith
-                (curry sequencePair)
+                (liftA2 (,))
                 [Right relInfo]
                 (latestChapUrl ^.. _Just)
     --}
@@ -457,7 +459,7 @@ clickAndScanComic = do
     latestChapUrl <- scrapeLatestRelInfo markup
     let newRelease =
             zipWith
-                (curry sequencePair)
+                (liftA2 (,))
                 (maybeRelInfo ^.. _Just . to Right)
                 (latestChapUrl ^.. _Just)
     newReleases <-
@@ -528,7 +530,7 @@ downloadRelease (relInfo, absUrl, _relUrl, _count) = bracketDownloadRelease $ do
     liftIO $ createDirectory $ toFilePath targetFolder
     currentReferer .= absUrl
     runningFileName <-
-        sequenceA $ parseRelFile . (TL.unpack . format (lpadded 3 '0' int)) <$> [1 .. length images]
+        traverse (parseRelFile . (TL.unpack . format (lpadded 3 '0' int))) [1 .. length images]
     result <-
         bracketDownloadImages $
             traverse tryDownloadImage $ zip images ((targetFolder </>) <$> runningFileName)
@@ -662,7 +664,7 @@ getRandomWaitTime :: forall env s. (HasStateRef s env, HasApp s) => RIO env Seco
 getRandomWaitTime = do
     web <- currentWeb <%= id
     case web of
-        SyoSetuMe -> randomRIO (minWaitTime, maxWaitTime)
+        MangaRawIo -> randomRIO (minWaitTime, maxWaitTime)
         _ -> return defaultWaitTime
 
 
@@ -727,7 +729,7 @@ execNewWin codeJS args = do
 
 downloadImage :: forall env s. (HasStateRef s env, HasApp s) => (URI, Path Abs File) -> RIO env ()
 downloadImage (url, filename) = do
-    base64 <- runWd $ executeAsyncScript getImage [toJSON $ render url]
+    base64 <- runWd $ executeAsyncScript xmlHttpRequest [toJSON $ render url]
     case parseOnly parseEmbeddedData $ encodeUtf8 $ base64 ^. _String of
         Right (ext, binaryData) -> case addExtension ("." <> T.unpack ext) filename of
             Right fullFileName -> liftIO $ BS.writeFile (toFilePath fullFileName) binaryData
@@ -735,37 +737,38 @@ downloadImage (url, filename) = do
                 throwM $ InvalidContentType $ displayException pathError
         Left parseError ->
             throwM $ InvalidContentType parseError
-  where
-    getImage :: Text
-    getImage =
-        [r|
-            const url = arguments[0];
-            const resolve = arguments[arguments.length - 1];
-            const magic = "xmlHttpRequest";
-            const input = document.createElement("input");
-            const uid = () => {
-                const tmp = performance.now().toString(36).replace(/\./g, "");
-                return document.getElementById(tmp) == undefined ? tmp : uid();
-            };
-            input.id = uid();
-            input.type = "hidden";
-            document.querySelectorAll("body")[0].append(input);
-            const handler = () => {
-                input.removeEventListener(input.id, handler);
-                const result = input.value;
-                delete input.id;
-                input.remove();
-                resolve(result);
-            };
-            input.addEventListener(input.id, handler);
-            const location = window.location;
-            const origin = location.protocol + "//" + location.hostname + "/";
-            window.postMessage(JSON.stringify({
-                magic: magic,
-                url: url,
-                id: input.id
-            }), origin);
-        |]
+
+
+xmlHttpRequest :: Text
+xmlHttpRequest =
+    [r|
+        const url = arguments[0];
+        const resolve = arguments[arguments.length - 1];
+        const magic = "xmlHttpRequest";
+        const input = document.createElement("input");
+        const uid = () => {
+            const tmp = performance.now().toString(36).replace(/\./g, "");
+            return document.getElementById(tmp) == undefined ? tmp : uid();
+        };
+        input.id = uid();
+        input.type = "hidden";
+        document.querySelectorAll("body")[0].append(input);
+        const handler = () => {
+            input.removeEventListener(input.id, handler);
+            const result = input.value;
+            delete input.id;
+            input.remove();
+            resolve(result);
+        };
+        input.addEventListener(input.id, handler);
+        const location = window.location;
+        const origin = location.protocol + "//" + location.hostname + "/";
+        window.postMessage(JSON.stringify({
+            magic: magic,
+            url: url,
+            id: input.id
+        }), origin);
+    |]
 
 
 updateWebTable :: forall env s. (HasStateRef s env, HasApp s) => Web -> URI -> RIO env ()

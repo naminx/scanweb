@@ -55,12 +55,12 @@ instance Show URL where
 
 
 data Web
-    = RawDevArtCom
+    = MangaRawIo
+    | RawDevArtCom
     | WeLoMaArt
     | WeLoveMangaOne
     | KlMangaNet
     | MangaHatachiCom
-    | SyoSetuMe
     | J9JpCom
     | SyoSetuTop
     | MangaGunCom
@@ -79,16 +79,16 @@ newtype Page a = Page a
 
 instance IsoEnum Web where
     mapping =
-        [ (1, RawDevArtCom)
+        [ (0, MangaRawIo)
+        , (1, RawDevArtCom)
         , (2, WeLoMaArt)
         , (3, WeLoveMangaOne)
         , (4, KlMangaNet)
         , (5, MangaHatachiCom)
-        , (6, SyoSetuMe)
-        , (7, J9JpCom)
-        , (8, SyoSetuTop)
-        , (9, MangaGunCom)
-        , (10, Manga9Co)
+        , (6, J9JpCom)
+        , (7, SyoSetuTop)
+        , (8, MangaGunCom)
+        , (9, Manga9Co)
         ]
 
 
@@ -137,16 +137,13 @@ instance Ord ReleaseInfo where
     Book a > Book b = a > b
 
 
-    compare a b =
-        if a == b
-            then EQ
-            else
-                if a < b && b > a
-                    then LT
-                    else
-                        if a > b && b < a
-                            then GT
-                            else error $ "comparing overlapping range: " <> show a <> " vs " <> show b
+    compare a b
+        | a == b = EQ
+        | a < b && b > a = LT
+        | a > b && b < a = GT
+        | otherwise =
+            error $
+                "comparing overlapping range: " <> show a <> " vs " <> show b
 
 
 emptyWebInfo :: WebInfo

@@ -50,19 +50,16 @@ executable scanweb
       Web.Common.Manga1001
       Web.Common.MangaHatachi
       Web.Common.WeLoveManga
-      Web.J9Jp.Com
-      Web.KlManga.Net
-      Web.Manga1000.Top
-      Web.Manga1001.Top
-      Web.Manga9.Co
-      Web.MangaGun.Com
-      Web.MangaHatachi.Com
-      Web.MangaRaw.Co
+      Web.MangaRaw.Io
       Web.RawDevArt.Com
-      Web.SyoSetu.Me
-      Web.SyoSetu.Top
       Web.WeLoMa.Art
       Web.WeLoveManga.One
+      Web.KlManga.Net
+      Web.MangaHatachi.Com
+      Web.J9Jp.Com
+      Web.SyoSetu.Top
+      Web.MangaGun.Com
+      Web.Manga9.Co
       WebDriver
   hs-source-dirs:
       src

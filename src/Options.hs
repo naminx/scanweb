@@ -18,6 +18,7 @@ import qualified Text.Megaparsec as MP (try)
 import Text.Megaparsec.Char.Lexer (decimal)
 
 
+---
 timestamp :: IsString s => s
 timestamp = __TIMESTAMP__
 
@@ -77,8 +78,15 @@ modeScanWebs =
             ( short 's'
                 <> long "scan"
                 <> metavar "WEBs"
-                -- <> value [succ (minBound :: Web) .. maxBound :: Web]
-                <> value [RawDevArtCom, WeLoMaArt, WeLoveMangaOne, KlMangaNet, MangaHatachiCom, SyoSetuMe]
+                <> value
+                    [ RawDevArtCom
+                    , WeLoMaArt
+                    , WeLoveMangaOne
+                    , KlMangaNet
+                    , MangaHatachiCom
+                    , J9JpCom
+                    , SyoSetuTop
+                    ]
                 <> help
                     ( "Scan specified webs (default mode), such as 1-3,5,7-9 "
                         <> "(-w for list of known webs)"

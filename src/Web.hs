@@ -57,8 +57,8 @@ import qualified Web.KlManga.Net as KlManga.Net
 import qualified Web.Manga9.Co as Manga9.Co
 import qualified Web.MangaGun.Com as MangaGun.Com
 import qualified Web.MangaHatachi.Com as MangaHatachi.Com
+import qualified Web.MangaRaw.Io as MangaRaw.Io
 import qualified Web.RawDevArt.Com as RawDevArt.Com
-import qualified Web.SyoSetu.Me as SyoSetu.Me
 import qualified Web.SyoSetu.Top as SyoSetu.Top
 import qualified Web.WeLoMa.Art as WeLoMa.Art
 import qualified Web.WeLoveManga.One as WeLoveManga.One
@@ -75,7 +75,7 @@ getNewReleaseUrl = do
     where
         localMapping =
             Map.fromList
-                [ (SyoSetuMe, SyoSetu.Me.newReleaseUrl)
+                [ (MangaRawIo, MangaRaw.Io.newReleaseUrl)
                 , (RawDevArtCom, RawDevArt.Com.newReleaseUrl)
                 , (WeLoMaArt, WeLoMa.Art.newReleaseUrl)
                 , (WeLoveMangaOne, WeLoveManga.One.newReleaseUrl)
@@ -95,7 +95,7 @@ keyElement = do
     where
         localMapping =
             Map.fromList
-                [ (SyoSetuMe, SyoSetu.Me.keyElement)
+                [ (MangaRawIo, MangaRaw.Io.keyElement)
                 , (RawDevArtCom, RawDevArt.Com.keyElement)
                 , (WeLoMaArt, WeLoMa.Art.keyElement)
                 , (WeLoveMangaOne, WeLoveManga.One.keyElement)
@@ -119,7 +119,7 @@ scrapeComics markup = do
         check domainName entry = entry ^? _Right . _1 . domain `elem` [Nothing, Just domainName]
         localMapping =
             Map.fromList
-                [ (SyoSetuMe, SyoSetu.Me.focusComics)
+                [ (MangaRawIo, MangaRaw.Io.focusComics)
                 , (RawDevArtCom, RawDevArt.Com.focusComics)
                 , (WeLoMaArt, WeLoMa.Art.focusComics)
                 , (WeLoveMangaOne, WeLoveManga.One.focusComics)
@@ -140,7 +140,7 @@ scrapeLatestRelInfo markup = do
     where
         localMapping =
             Map.fromList
-                [ (SyoSetuMe, SyoSetu.Me.focusLatestRelInfo)
+                [ (MangaRawIo, MangaRaw.Io.focusLatestRelInfo)
                 , (RawDevArtCom, RawDevArt.Com.focusLatestRelInfo)
                 , (WeLoMaArt, WeLoMa.Art.focusLatestRelInfo)
                 , (WeLoveMangaOne, WeLoveManga.One.focusLatestRelInfo)
@@ -170,7 +170,7 @@ scrapeRelInfos markup = do
     where
         localMapping =
             Map.fromList
-                [ (SyoSetuMe, SyoSetu.Me.focusRelInfos)
+                [ (MangaRawIo, MangaRaw.Io.focusRelInfos)
                 , (RawDevArtCom, RawDevArt.Com.focusRelInfos)
                 , (WeLoMaArt, WeLoMa.Art.focusRelInfos)
                 , (WeLoveMangaOne, WeLoveManga.One.focusRelInfos)
@@ -191,7 +191,7 @@ scrapeRelInfo markup = do
     where
         localMapping =
             Map.fromList
-                -- [ (SyoSetuMe, SyoSetu.Me.focusRelInfo)
+                -- [ (MangaRawIo, MangaRaw.Io.focusRelInfo)
                 [ (RawDevArtCom, RawDevArt.Com.focusRelInfo)
                 , (WeLoMaArt, WeLoMa.Art.focusRelInfo)
                 , (WeLoveMangaOne, WeLoveManga.One.focusRelInfo)
@@ -212,7 +212,7 @@ scrapeImages markup = do
     where
         localMapping =
             Map.fromList
-                [ (SyoSetuMe, SyoSetu.Me.focusImages)
+                [ (MangaRawIo, MangaRaw.Io.focusImages)
                 , (RawDevArtCom, RawDevArt.Com.focusImages)
                 , (WeLoMaArt, WeLoMa.Art.focusImages)
                 , (WeLoveMangaOne, WeLoveManga.One.focusImages)

@@ -15,12 +15,11 @@ import Control.Monad.Trans.Resource
 import qualified Data.Text.IO as T
 import qualified Data.Text.Lazy.IO as TL
 import Data.Tuple.Extra (dupe)
-import Database.Esqueleto.Experimental hiding ((^.))
+import Database.Esqueleto.Experimental hiding ((<&>), (^.))
 import qualified Database.Esqueleto.Experimental as ES
 import Import hiding (from, on)
 import Init
 import Options
-import Path
 import Path (SomeBase (..), (</>))
 import Progs
 import RIO.Process
@@ -28,7 +27,7 @@ import RIO.State
 import qualified RIO.Text as T
 import qualified RIO.Text.Lazy as TL
 import Replace.Megaparsec (anyTill, breakCap)
-import Run (runWdSession)
+import Run (runWdSession, xmlHttpRequest)
 import System.Console.ANSI (SGR (..), setSGR)
 import System.Console.ANSI.Types (Color (..))
 import System.Process (CreateProcess (..), StdStream (..), withCreateProcess)
@@ -52,6 +51,7 @@ _dummy =
         ("" ^.. Text.Taggy.Lens.html)
         (pPrint (0 :: Int) :: IO ())
         [uri||]
+        xmlHttpRequest
 
 
 main :: IO ()
@@ -107,35 +107,3 @@ getProg appmode = case appmode of
     DownloadRelease (web, comic, relInfo) -> progDownloadRelease (web, comic, relInfo)
     ListWebs -> progListWebs
     ListComics -> progListComics
-
-
-getImg :: Text
-getImg =
-    [r|
-        const url = arguments[0];
-        const resolve = arguments[arguments.length - 1];
-        const magic = "xmlHttpRequest";
-        const input = document.createElement("input");
-        const uid = () => {
-            const tmp = performance.now().toString(36).replace(/\./g, "");
-            return document.getElementById(tmp) == undefined ? tmp : uid();
-        };
-        input.id = uid();
-        input.type = "hidden";
-        document.querySelectorAll("body")[0].append(input);
-        const handler = () => {
-            input.removeEventListener(input.id, handler);
-            const result = input.value;
-            delete input.id;
-            input.remove();
-            resolve(result);
-        };
-        input.addEventListener(input.id, handler);
-        const location = window.location;
-        const origin = location.protocol + "//" + location.hostname + "/";
-        window.postMessage(JSON.stringify({
-            magic: magic,
-            url: url,
-            id: input.id
-        }), origin);
-    |]

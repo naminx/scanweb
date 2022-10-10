@@ -1,0 +1,6 @@
+packages: .
+
+source-repository-package
+    type: git
+    location: https://github.com/naminx/double-conversion.git
+    tag: 7988ffbc466cf37b2024e7e81e5436a892e05c4a
