@@ -17,6 +17,7 @@
 // @match        https://klmanga.com/*
 // @match        https://mangahatachi.com/*
 // @match        https://j9jp.com/*
+// @match        https://j8jp.com/*
 // @match        https://mangagun.com/*
 // @icon         https://mangaraw.io/images/android-chrome-192x192.png
 // @grant        GM.xmlHttpRequest
@@ -28,6 +29,7 @@
 // @connect      comick.top
 // @connect      ihlv1.xyz
 // @connect      j9jp.com
+// @connect      j9.phoenixmanga.com
 // @connect      justaquickbite.com
 // @connect      klimv1.xyz
 // @connect      manga9.co
@@ -68,7 +70,9 @@ const getDataAsBase64 = (url) =>
             method: "GET",
             headers: {
                 referer: referer,
-                accept: "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8"
+                accept: "text/html,application/xhtml+xml,application/xml;q=0.9,"
+                      + "image/avif,image/webp,image/apng,*/*;q=0.8,"
+                      + "application/signed-exchange;v=b3;q=0.9"
             },
             url: url.replace("newimage.php?manga=", "proxy.php?link="),
             withCredentials: true,

@@ -2,16 +2,14 @@
   "nodes": {
     "flake-parts": {
       "inputs": {
-        "nixpkgs": [
-          "nixpkgs"
-        ]
+        "nixpkgs-lib": "nixpkgs-lib"
       },
       "locked": {
-        "lastModified": 1664385320,
-        "narHash": "sha256-uSCHb9RUqHRjTpI8OzyaUuHckFnnxwZqlXEuo+yUpYQ=",
+        "lastModified": 1666885127,
+        "narHash": "sha256-uXA/3lhLhwOTBMn9a5zJODKqaRT+SuL5cpEmOz2ULoo=",
         "owner": "hercules-ci",
         "repo": "flake-parts",
-        "rev": "45298bd207b26e1bcd030a0bb075aa2da29f8e30",
+        "rev": "0e101dbae756d35a376a5e1faea532608e4a4b9a",
         "type": "github"
       },
       "original": {
@@ -22,11 +20,11 @@
     },
     "haskell-flake": {
       "locked": {
-        "lastModified": 1664562023,
-        "narHash": "sha256-EYpGp8IlktZUF6k6StHZ8u8XaCY0JpTuG7u3FJWyPHM=",
+        "lastModified": 1666647145,
+        "narHash": "sha256-Jzmm+BhUai/r8Qo2ZXYUnW3OIcy36OcMWNLPC7dF68E=",
         "owner": "srid",
         "repo": "haskell-flake",
-        "rev": "c5843170f9581b33740b4c081fdf6e835720d85e",
+        "rev": "2ef06a73fef2856fb5d0f5a8a7a4fef964e0d94f",
         "type": "github"
       },
       "original": {
@@ -37,15 +35,33 @@
     },
     "nixpkgs": {
       "locked": {
-        "lastModified": 1664370076,
-        "narHash": "sha256-NDnIo0nxJozLwEw0VPM+RApMA90uTfbvaNNtC5eB7Os=",
+        "lastModified": 1667142599,
+        "narHash": "sha256-OLJxsg9VqfKjFkerOxWtNIkibsCvxsv5A8wNWO1MeWk=",
         "owner": "nixos",
         "repo": "nixpkgs",
-        "rev": "854fdc68881791812eddd33b2fed94b954979a8e",
+        "rev": "412b9917cea092f3d39f9cd5dead4effd5bc4053",
         "type": "github"
       },
       "original": {
         "owner": "nixos",
+        "ref": "nixos-unstable",
+        "repo": "nixpkgs",
+        "type": "github"
+      }
+    },
+    "nixpkgs-lib": {
+      "locked": {
+        "dir": "lib",
+        "lastModified": 1665349835,
+        "narHash": "sha256-UK4urM3iN80UXQ7EaOappDzcisYIuEURFRoGQ/yPkug=",
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "34c5293a71ffdb2fe054eb5288adc1882c1eb0b1",
+        "type": "github"
+      },
+      "original": {
+        "dir": "lib",
+        "owner": "NixOS",
         "ref": "nixos-unstable",
         "repo": "nixpkgs",
         "type": "github"

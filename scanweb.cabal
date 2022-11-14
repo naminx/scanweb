@@ -33,6 +33,7 @@ executable scanweb
       Init
       Lib
       Lib.Console
+      Lib.Esqueleto
       Lib.Extra
       Lib.Lens
       Lib.Megaparsec
@@ -78,6 +79,8 @@ executable scanweb
     , exceptions
     , extra
     , formatting
+    , ghc
+    , http-api-data
     , http-client
     , lens
     , lens-aeson
@@ -86,6 +89,7 @@ executable scanweb
     , monad-control
     , monad-logger
     , optparse-simple
+    , path-pieces
     , path
     , persistent
     , persistent-sqlite
@@ -98,6 +102,7 @@ executable scanweb
     , resourcet
     , rio
     , rio-orphans
+    , scientific
     , script-monad
     , taggy-lens
     , text

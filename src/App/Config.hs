@@ -44,7 +44,7 @@ defaultDbFile =
 
 
 defaultMaxNumPages :: Int
-defaultMaxNumPages = 25
+defaultMaxNumPages = 40
 
 
 defaultOptions :: Options

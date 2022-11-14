@@ -37,19 +37,19 @@ setupEnv = do
     mkUrlTable
 
 
-newWdSession :: IO SessionId
+newWdSession :: (MonadUnliftIO m, MonadThrow m) => m SessionId
 newWdSession = do
-    (result, _, _) <- execWebDriverT chromeConfig $ newSession normalChrome
+    (result, _, _) <- liftIO $ execWebDriverT chromeConfig $ newSession normalChrome
     either throwM return result
 
 
-newSqlBackend :: Path Abs File -> IO SqlBackend
+newSqlBackend :: MonadUnliftIO m => Path Abs File -> m SqlBackend
 newSqlBackend dbFilePath = do
-    conn <- open filePath
-    wrapConnectionInfo (mkSqliteConnectionInfo filePath) conn defaultLogFunc
+    conn <- liftIO $ open filePath
+    liftIO $ wrapConnectionInfo (mkSqliteConnectionInfo filePath) conn defaultLogFunc
   where
     filePath = T.pack $ toFilePath dbFilePath
-    defaultLogFunc = \_ _ _ _ -> return ()
+    defaultLogFunc _ _ _ _ = return ()
 
 
 initApp :: LogFunc -> ProcessContext -> Options -> SqlBackend -> SessionId -> App

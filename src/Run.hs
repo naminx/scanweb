@@ -1,7 +1,4 @@
-{-# LANGUAGE CPP #-}
--- #endif
 {-# LANGUAGE LambdaCase #-}
--- #if __GLASGOW_HASKELL__ >= 902
 {-# LANGUAGE OverloadedRecordDot #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE QuasiQuotes #-}
@@ -88,20 +85,16 @@ import Web.Api.WebDriver hiding (Page)
 import Prelude (putStrLn)
 
 
--- #if __GLASGOW_HASKELL__ >= 902
 set_ :: PersistEntity val => SqlExpr (Entity val) -> [SqlExpr (Entity val) -> SqlExpr Update] -> SqlQuery ()
--- #else
--- set_ :: PersistEntity val => SqlExpr (Entity val) -> [SqlExpr (Update val)] -> SqlQuery ()
--- #endif
 set_ = ES.set
 
 
-(.^) ::
-    forall typ val.
-    (PersistEntity val, PersistField typ) =>
-    SqlExpr (Entity val) ->
-    EntityField val typ ->
-    SqlExpr (ES.Value typ)
+(.^)
+    :: forall typ val
+     . (PersistEntity val, PersistField typ)
+    => SqlExpr (Entity val)
+    -> EntityField val typ
+    -> SqlExpr (ES.Value typ)
 (.^) = (ES.^.)
 
 
@@ -151,11 +144,11 @@ setComicTo comic = do
     currentComicUrl .= url
 
 
-runWd ::
-    forall env s a.
-    (HasStateRef s env, HasApp s) =>
-    WebDriverT IO a ->
-    RIO env a
+runWd
+    :: forall env s a
+     . (HasStateRef s env, HasApp s)
+    => WebDriverT IO a
+    -> RIO env a
 runWd action = do
     wdSess <- currentWdSession <%= id
     liftIO $ runWdSession wdSess action
@@ -172,10 +165,10 @@ runWdSession wdSess action = do
     initialSession = initialState . userState . sessionId
 
 
-updateNewReleases ::
-    forall env s.
-    (HasStateRef s env, HasApp s, HasLogFunc s, HasProcessContext s) =>
-    RIO env [Try URI]
+updateNewReleases
+    :: forall env s
+     . (HasStateRef s env, HasApp s, HasLogFunc s, HasProcessContext s)
+    => RIO env [Try URI]
 updateNewReleases = do
     Page page <- currentPage <%= id
     maxPage <- options . maxNumPages <%= id
@@ -184,7 +177,8 @@ updateNewReleases = do
         else do
             domain <- currentWebInfo . _1 <%= id
             runSimpleApp . logInfo . display $
-                vivid Blue <> unRText domain
+                vivid Blue
+                    <> unRText domain
                     <> (vivid Black <> " [" <> T.pack (show page) <> "]")
             newReleaseUrl <- getNewReleaseUrl
             runWd $ navigateToStealth $ render newReleaseUrl
@@ -241,20 +235,20 @@ getMarkup = do
         else return $ "<html>" <> markup' <> "</html>"
 
 
-tryClickAndDownloadComic ::
-    forall env s.
-    (HasStateRef s env, HasApp s, HasLogFunc s, HasProcessContext s) =>
-    Try (URI, Maybe ReleaseInfo) ->
-    RIO env (Try URI)
+tryClickAndDownloadComic
+    :: forall env s
+     . (HasStateRef s env, HasApp s, HasLogFunc s, HasProcessContext s)
+    => Try (URI, Maybe ReleaseInfo)
+    -> RIO env (Try URI)
 tryClickAndDownloadComic args =
     tryAny $ clickAndDownloadComic args
 
 
-clickAndDownloadComic ::
-    forall env s.
-    (HasStateRef s env, HasApp s, HasLogFunc s, HasProcessContext s) =>
-    Try (URI, Maybe ReleaseInfo) ->
-    RIO env URI
+clickAndDownloadComic
+    :: forall env s
+     . (HasStateRef s env, HasApp s, HasLogFunc s, HasProcessContext s)
+    => Try (URI, Maybe ReleaseInfo)
+    -> RIO env URI
 clickAndDownloadComic (Left someException) = liftIO $ do
     runSimpleApp $ logError $ display $ vivid Red <> T.pack (displayException someException)
     throwM SomeChaptersNotDownloaded
@@ -311,44 +305,39 @@ updateComicTable comic = \case
 
 
 updateComicTableChapter :: forall env s. (HasStateRef s env, HasApp s) => Comic -> Chapter -> RIO env ()
-updateComicTableChapter comic chapter_@(Chapter chapter section) = do
+updateComicTableChapter comic chapter = do
     bracket (currentSqlBackend <%= id) (runSqlConn transactionUndo) $ do
         runSqlConn $ do
             update $ \row -> do
-                set_ row [ComicsChapter =. val chapter, ComicsSection =. val section]
-                -- #if __GLASGOW_HASKELL__ >= 902
-                where_ $ row.comic ==. val (unComic comic)
-            -- #else
-            --  where_ $ row .^ ComicsComic ==. val (unComic comic)
-            -- #endif
+                set_ row [ComicsChapter =. val chapter]
+                where_ $ row.comic ==. val comic
             transactionSave
-    comicTable . ix comic . _4 .= chapter_
+    comicTable . ix comic . _4 .= chapter
 
 
 updateComicTableVolume :: forall env s. (HasStateRef s env, HasApp s) => Comic -> Volume -> RIO env ()
 updateComicTableVolume comic volume = do
     sqlBackend <- currentSqlBackend <%= id
-    flip runSqlConn sqlBackend $
+    runSql sqlBackend $
         update $ \row -> do
-            set_ row [ComicsVolume =. val (unVolume volume)]
-            -- #if __GLASGOW_HASKELL__ >= 902
-            where_ $ row.comic ==. val (unComic comic)
-    -- #else
-    --             where_ $ row .^ ComicsComic ==. val (unComic comic)
-    -- #endif
+            set_ row [ComicsVolume =. val volume]
+            where_ $ row.comic ==. val comic
     comicTable . ix comic . _3 .= volume
 
 
-openAndScanComic ::
-    forall env s.
-    (HasStateRef s env, HasApp s, HasLogFunc s, HasProcessContext s) =>
-    RIO env (Maybe ReleaseInfo)
+openAndScanComic
+    :: forall env s
+     . (HasStateRef s env, HasApp s, HasLogFunc s, HasProcessContext s)
+    => RIO env (Maybe ReleaseInfo)
 openAndScanComic = do
     (Title {unTitle = title}, _, volumeLast, chapterLast) <- currentComicInfo <%= id
     runSimpleApp . logInfo . display $
-        vivid Black <> "scanning "
+        vivid Black
+            <> "scanning "
             <> (vivid Yellow <> title)
-            <> ( vivid Black <> " (Vol." <> T.pack (show volumeLast)
+            <> ( vivid Black
+                    <> " (Vol."
+                    <> T.pack (show volumeLast)
                     <> (", Ch." <> T.pack (show chapterLast) <> ")")
                )
     comicUrl <- currentComicUrl <%= id
@@ -388,15 +377,16 @@ newerThan relInfo (volumeLast, chapterLast) = case relInfo of
     Episodes (_, chapterEnd) -> chapterEnd > chapterLast
 
 
-openAndDownloadRelease ::
-    forall env s.
-    (HasStateRef s env, HasApp s, HasLogFunc s, HasProcessContext s) =>
-    ReleaseInfo ->
-    RIO env ()
+openAndDownloadRelease
+    :: forall env s
+     . (HasStateRef s env, HasApp s, HasLogFunc s, HasProcessContext s)
+    => ReleaseInfo
+    -> RIO env ()
 openAndDownloadRelease relInfo = do
     (Title {unTitle = title}, _, _, _) <- currentComicInfo <%= id
     runSimpleApp . logInfo . display $
-        vivid Black <> "scanning "
+        vivid Black
+            <> "scanning "
             <> (vivid Yellow <> title)
     comicUrl <- currentComicUrl <%= id
     runWd $ navigateToStealth $ render comicUrl
@@ -437,16 +427,19 @@ gotoPage url = ignoreReturn $ executeJS [] $ "window.location.href = '" <> url <
 -- Returns `Just` the last chapter successfully downloaded.
 -- Returns `Nothing` if the comic is up to date.
 -- May throw `SomeChaptersNotDownloaded`
-clickAndScanComic ::
-    forall env s.
-    (HasStateRef s env, HasApp s, HasLogFunc s, HasProcessContext s) =>
-    RIO env (Maybe ReleaseInfo)
+clickAndScanComic
+    :: forall env s
+     . (HasStateRef s env, HasApp s, HasLogFunc s, HasProcessContext s)
+    => RIO env (Maybe ReleaseInfo)
 clickAndScanComic = do
     (Title {unTitle = title}, _, volumeLast, chapterLast) <- currentComicInfo <%= id
     runSimpleApp . logInfo . display $
-        vivid Black <> "scanning "
+        vivid Black
+            <> "scanning "
             <> (vivid Yellow <> title)
-            <> ( vivid Black <> " (Vol." <> T.pack (show volumeLast)
+            <> ( vivid Black
+                    <> " (Vol."
+                    <> T.pack (show volumeLast)
                     <> (", Ch." <> T.pack (show chapterLast) <> ")")
                )
     comicUrl <- currentComicUrl <%= id
@@ -487,11 +480,11 @@ uniqRelease (x1 : x2 : xs) =
         else x1 : uniqRelease (x2 : xs)
 
 
-tryDownloadRelease ::
-    forall env s.
-    (HasStateRef s env, HasApp s, HasLogFunc s, HasProcessContext s) =>
-    Try (ReleaseInfo, URI, URI, Int) ->
-    RIO env (Try ReleaseInfo)
+tryDownloadRelease
+    :: forall env s
+     . (HasStateRef s env, HasApp s, HasLogFunc s, HasProcessContext s)
+    => Try (ReleaseInfo, URI, URI, Int)
+    -> RIO env (Try ReleaseInfo)
 tryDownloadRelease args = case args of
     Left someException -> do
         printException someException
@@ -510,11 +503,11 @@ printException someException = liftIO $ do
     runSimpleApp $ logError $ display $ vivid Red <> T.pack (displayException someException)
 
 
-downloadRelease ::
-    forall env s.
-    (HasStateRef s env, HasApp s, HasLogFunc s, HasProcessContext s) =>
-    (ReleaseInfo, URI, URI, Int) ->
-    RIO env ReleaseInfo
+downloadRelease
+    :: forall env s
+     . (HasStateRef s env, HasApp s, HasLogFunc s, HasProcessContext s)
+    => (ReleaseInfo, URI, URI, Int)
+    -> RIO env ReleaseInfo
 downloadRelease (relInfo, absUrl, _relUrl, _count) = bracketDownloadRelease $ do
     rootFolder <- options . rootDir <%= id
     comicFolder <- currentComicInfo . _2 <%= id
@@ -533,7 +526,8 @@ downloadRelease (relInfo, absUrl, _relUrl, _count) = bracketDownloadRelease $ do
         traverse (parseRelFile . (TL.unpack . format (lpadded 3 '0' int))) [1 .. length images]
     result <-
         bracketDownloadImages $
-            traverse tryDownloadImage $ zip images ((targetFolder </>) <$> runningFileName)
+            traverse tryDownloadImage $
+                zip images ((targetFolder </>) <$> runningFileName)
     runWd $ closeWindow >> switchToWindow comicWin
     traverseOf_ (each . _Left) printExceptionEx result
     when (any (has _Left) result) $
@@ -545,11 +539,11 @@ downloadRelease (relInfo, absUrl, _relUrl, _count) = bracketDownloadRelease $ do
     printDownloadingChapter = do
         logSticky
             =<< stickyLine
-            <.= ( vivid Black <> "downloading " <> case relInfo of
-                    Book _ -> "volume "
-                    _ -> "chapter "
-                )
-            <> (vivid Yellow <> T.pack (showReleaseInfo relInfo))
+                <.= ( vivid Black <> "downloading " <> case relInfo of
+                        Book _ -> "volume "
+                        _ -> "chapter "
+                    )
+                    <> (vivid Yellow <> T.pack (showReleaseInfo relInfo))
 
     printNewLine = do
         logStickyDone =<< stickyLine <%= id
@@ -575,7 +569,8 @@ downloadRelease (relInfo, absUrl, _relUrl, _count) = bracketDownloadRelease $ do
         markup <- runWd getMarkup
         images <- scrapeImages markup <&> mapRelativeTo absUrl id
         if has
-            ( folded . _Right
+            ( folded
+                . _Right
                 . to (not . null . T.indices "image/gif" . render)
                 . filtered (== True)
             )
@@ -622,11 +617,11 @@ showReleaseInfo = \case
         show chapterBegin <> "-" <> show chapterEnd
 
 
-tryDownloadImage ::
-    forall env s.
-    (HasStateRef s env, HasApp s, HasLogFunc s, HasProcessContext s) =>
-    (Try URI, Path Abs File) ->
-    RIO env (Try ())
+tryDownloadImage
+    :: forall env s
+     . (HasStateRef s env, HasApp s, HasLogFunc s, HasProcessContext s)
+    => (Try URI, Path Abs File)
+    -> RIO env (Try ())
 tryDownloadImage (tryUrl, imgFileName) = case tryUrl of
     Left someException -> return $ Left someException
     Right url -> do
@@ -774,29 +769,17 @@ xmlHttpRequest =
 updateWebTable :: forall env s. (HasStateRef s env, HasApp s) => Web -> URI -> RIO env ()
 updateWebTable web absUrl = do
     sqlBackend <- currentSqlBackend <%= id
-    flip runSqlConn sqlBackend $
+    runSql sqlBackend $
         update $ \row -> do
-            set_ row [WebsSentinel =. val (render absUrl)]
-            -- #if __GLASGOW_HASKELL__ >= 902
-            where_ $ row.web ==. val (fromEnum web)
+            set_ row [WebsSentinel =. val absUrl]
+            where_ $ row.web ==. val web
 
 
--- #else
---             where_ $ row .^ WebsWeb ==. val (fromEnum web)
--- #endif
-
--- selectorAnchor [uri|https://manga1000.top/page/2|] == "
---     document.querySelectorAll (\"
---         a[href='https://manga1000.top/page/2'],
---         a[href='/page/2'],
---         a[href='page/2'],
---         a[href='https://manga1000.top/page/2/'],
---         a[href='/page/2/'],
---         a[href='page/2/']\"
---     )"
 selectorAnchor :: URI -> Text
 selectorAnchor url =
-    "a[href='" <> render url <> "']"
+    "a[href='"
+        <> render url
+        <> "']"
         <> (",a[href='" <> render (url & removeHttps & removeDomain True) <> "']")
         <> (",a[href='" <> render (url & removeHttps & removeDomain False) <> "']")
         <> (",a[href='" <> render url <> "/']")
@@ -806,13 +789,6 @@ selectorAnchor url =
     removeHttps = uriScheme .~ Nothing
     removeDomain isPathAbsolute = uriAuthority .~ Left isPathAbsolute
 
-
-{--
-clickAnchor :: URI -> WD ()
-clickAnchor url = do
-    anchor <- findElem $ ByCSS $ selectorAnchor url
-    click anchor
---}
 
 clickAnchorTargetBlank :: URI -> Text
 clickAnchorTargetBlank url =
@@ -851,11 +827,11 @@ waitUntilJS condition = do
     unless (satisfied == Bool True) $ waitUntilJS condition
 
 
-scanWeb ::
-    forall env s.
-    (HasStateRef s env, HasApp s, HasLogFunc s, HasProcessContext s) =>
-    Web ->
-    RIO env ()
+scanWeb
+    :: forall env s
+     . (HasStateRef s env, HasApp s, HasLogFunc s, HasProcessContext s)
+    => Web
+    -> RIO env ()
 scanWeb web = do
     setWebTo web
     result <- updateNewReleases
@@ -863,11 +839,11 @@ scanWeb web = do
     traverse_ (updateWebTable web) lastSuccess
 
 
-testComics ::
-    forall env s.
-    (HasStateRef s env, HasApp s) =>
-    Web ->
-    RIO env ()
+testComics
+    :: forall env s
+     . (HasStateRef s env, HasApp s)
+    => Web
+    -> RIO env ()
 testComics web = do
     setWebTo web
     getNewReleaseUrl >>= \url -> runWd (navigateToStealth $ render url) *> waitForLoaded url
@@ -878,11 +854,11 @@ testComics web = do
     runWd getMarkup >>= scrapeComics >>= pPrint . fmap (fmap $ first URL)
 
 
-testChapter ::
-    forall env s.
-    (HasStateRef s env, HasApp s) =>
-    Web ->
-    RIO env ()
+testChapter
+    :: forall env s
+     . (HasStateRef s env, HasApp s)
+    => Web
+    -> RIO env ()
 testChapter web = do
     setWebTo web
     getNewReleaseUrl >>= \url -> runWd (navigateToStealth $ render url) *> waitForLoaded url

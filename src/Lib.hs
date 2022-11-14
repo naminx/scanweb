@@ -2,6 +2,7 @@
 
 module Lib (
     module Lib.Console,
+    module Lib.Esqueleto,
     module Lib.Extra,
     module Lib.Lens,
     module Lib.MIME,
@@ -13,6 +14,7 @@ module Lib (
 ) where
 
 import Lib.Console
+import Lib.Esqueleto
 import Lib.Extra
 import Lib.Lens
 import Lib.MIME

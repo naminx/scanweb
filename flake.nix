@@ -42,7 +42,8 @@
           root = ./.;
           name = "scanweb";
           buildTools = hp: {
-            # inherit (pkgs)
+            inherit (pkgs)
+                lambdabot;
             #   chromedriver
             #   chromium;
             # inherit (hp)
