@@ -16,6 +16,7 @@ import Text.URI.Lens (queryParam, uriQuery)
 import Text.URI.QQ (queryKey, uri)
 import Web.Common
 
+
 -- import Debug.Trace
 
 newReleaseUrl :: MonadThrow m => Page Int -> m URI
@@ -27,11 +28,17 @@ newReleaseUrl (Page n)
             [uri|/manga-list.html?listType=pagination&page=&artist=&author=&group=&m_status=&name=&genre=&ungenre=&magazine=&sort=last_update&sort_type=DESC|]
                 & uriQuery . queryParam [queryKey|page|] .~ pageNo
 
+
 keyElement :: Text
 keyElement = "a.navbar-brand[href='/']"
 
+
 focusComics :: Fold Node (Try (URI, Maybe ReleaseInfo))
-focusComics = divThumbItemFlow . liftFold2 (liftA2 (,)) comics relInfo
+focusComics = focusComicsAux "Chap "
+
+
+focusComicsAux :: Text -> Fold Node (Try (URI, Maybe ReleaseInfo))
+focusComicsAux chapterLabel = divThumbItemFlow . liftFold2 (liftA2 (,)) comics relInfo
   where
     divThumbItemFlow = allNamed (only "div") . attributed (hasClasses ["thumb-item-flow", "col-6", "col-md-3"])
 
@@ -48,10 +55,12 @@ focusComics = divThumbItemFlow . liftFold2 (liftA2 (,)) comics relInfo
             . to (fmap Just)
       where
         divChapterTitle = allNamed (only "div") . attributed (hasClass "chapter-title")
-        mkChapterNo = parseEither $ string "Chap " >> comicChapter
+        mkChapterNo = parseEither $ string chapterLabel >> comicChapter
+
 
 focusLatestRelInfo :: Fold Node (Try URI)
 focusLatestRelInfo = focusLatestRelInfo' "Read the last chapter"
+
 
 focusLatestRelInfo' :: Text -> Fold Node (Try URI)
 focusLatestRelInfo' latestLabel =
@@ -60,6 +69,7 @@ focusLatestRelInfo' latestLabel =
     anchorBtnDanger = anchor . attributed (hasClass "btn-danger")
     filterLastChap = filtered $ view (contents . to T.strip) >>> (== latestLabel)
     hrefToURI = attr "href" . tryParseURI
+
 
 focusRelInfos :: Fold Node (Try (ReleaseInfo, URI))
 focusRelInfos =
@@ -75,6 +85,7 @@ focusRelInfos =
     url :: Fold Element (Try URI)
     url = attr "href" . tryParseURI
 
+
 focusRelInfo :: Fold Node (Try ReleaseInfo)
 focusRelInfo =
     ulChapList . elements . liCurrent . anchor . relInfo
@@ -84,6 +95,7 @@ focusRelInfo =
     relInfo = to (preview contents) . to (fmap T.strip) . tryParseChapter mkChapterNo . to (fmap Episode)
       where
         mkChapterNo = parseEither $ string "Chapter " >> comicChapter
+
 
 focusImages :: Fold Node (Try URI)
 focusImages =
