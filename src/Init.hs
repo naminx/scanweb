@@ -21,7 +21,7 @@ import App.Config
 import Database.Persist.Sqlite hiding (LogFunc)
 import Database.Sqlite (open)
 import Import
-import Path (Abs, File, Path, toFilePath)
+import Path (Abs, File, toFilePath)
 import qualified RIO.Map as Map (empty)
 import RIO.Process
 import qualified RIO.Text as T

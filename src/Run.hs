@@ -8,7 +8,6 @@
 
 module Run where
 
-import App.Chapter
 import App.Config
 import App.Exceptions
 import App.Tables
@@ -49,6 +48,7 @@ import Formatting.Formatters (int, text)
 import Lib hiding (domain)
 import qualified Lib as URI
 import Network.HTTP.Client (HttpException)
+import RIO.Partial (succ)
 
 -- import Network.Wreq (defaults, header, responseBody, responseHeader)
 -- import Network.Wreq.Session (getWith)
@@ -196,7 +196,7 @@ updateNewReleases = do
                 then traverse tryClickAndDownloadComic $ takeWhile (urlNotMatch sentinel) newReleases
                 else do
                     result <- traverse tryClickAndDownloadComic newReleases
-                    currentPage %= fmap (+ 1)
+                    currentPage %= succ
                     (result <>) <$> updateNewReleases
   where
     urlNotMatch = (preview (_Right . _1) >>>) . (/=) . Just
@@ -849,7 +849,7 @@ testComics web = do
     getNewReleaseUrl >>= \url -> runWd (navigateToStealth $ render url) *> waitForLoaded url
     runWd getMarkup >>= scrapeComics >>= pPrint . fmap (fmap $ first URL)
 
-    void $ currentPage <%= fmap (+ 1)
+    void $ currentPage <%= succ
     getNewReleaseUrl >>= \url -> runWd (navigateToStealth $ render url) *> waitForLoaded url
     runWd getMarkup >>= scrapeComics >>= pPrint . fmap (fmap $ first URL)
 

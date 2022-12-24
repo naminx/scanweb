@@ -4,7 +4,6 @@
 
 module Options where
 
-import App.Chapter
 import App.Config
 import App.Exceptions
 import Control.Arrow (left)
@@ -79,13 +78,11 @@ modeScanWebs =
                 <> long "scan"
                 <> metavar "WEBs"
                 <> value
-                    [ RawDevArtCom
-                    , WeLoMaArt
+                    [ WeLoMaArt
                     , WeLoveMangaOne
                     , KlMangaNet
-                    , MangaHatachiCom
+                    , HachiMangaCom
                     , J9JpCom
-                    , SyoSetuTop
                     ]
                 <> help
                     ( "Scan specified webs (default mode), such as 1-3,5,7-9 "

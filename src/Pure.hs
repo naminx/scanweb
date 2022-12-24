@@ -40,5 +40,5 @@ import Import
 import Text.URI (URI)
 
 
-newReleaseUrl :: Web -> Page Int -> URI
+newReleaseUrl :: Web -> Page -> URI
 newReleaseUrl = undefined

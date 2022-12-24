@@ -4,7 +4,6 @@
 
 module Web.J9Jp.Com where
 
-import App.Chapter
 import qualified Data.Text as T (replace)
 import Import
 import qualified RIO.Text as T (pack)
@@ -16,7 +15,7 @@ import Text.URI.QQ (uri)
 import Web.Common
 
 
-newReleaseUrl :: MonadThrow m => Page Int -> m URI
+newReleaseUrl :: MonadThrow m => Page -> m URI
 newReleaseUrl (Page n)
     -- This trailing slash is important to flag an ABSOLUTE path.
     | n == 1 = return [uri|/|]
@@ -40,7 +39,9 @@ focusComics = divL . liftFold2 (liftA2 (,)) comics relInfo
 
     relInfo :: Fold Element (Try (Maybe ReleaseInfo))
     relInfo =
-        elements . ulManga . taking 1 (to $ preview $ anchor . contents)
+        elements
+            . ulManga
+            . taking 1 (to $ preview $ anchor . contents)
             . tryParseChapter mkChapterNo
             . to (fmap $ Just . Episode)
       where

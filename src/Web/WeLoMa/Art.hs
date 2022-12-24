@@ -6,7 +6,7 @@ import Import
 import qualified Web.Common.WeLoveManga as WeLoveManga
 
 
-newReleaseUrl :: MonadThrow m => Page Int -> m URI
+newReleaseUrl :: MonadThrow m => Page -> m URI
 newReleaseUrl = WeLoveManga.newReleaseUrl
 
 

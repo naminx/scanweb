@@ -36,7 +36,6 @@
 
 module Web where
 
-import App.Chapter
 import App.Exceptions
 import Data.Char (isSpace)
 import Data.Tuple.Extra (dupe)
@@ -72,40 +71,40 @@ getNewReleaseUrl = do
     mangaList <- maybe (throwM $ LookupWebFailed web) return $ localMapping ^? ix web
     page <- currentPage <%= id
     https domainName <$> mangaList page
-    where
-        localMapping =
-            Map.fromList
-                [ (MangaRawIo, MangaRaw.Io.newReleaseUrl)
-                , (RawDevArtCom, RawDevArt.Com.newReleaseUrl)
-                , (WeLoMaArt, WeLoMa.Art.newReleaseUrl)
-                , (WeLoveMangaOne, WeLoveManga.One.newReleaseUrl)
-                , (KlMangaNet, KlManga.Net.newReleaseUrl)
-                , (MangaGunCom, MangaGun.Com.newReleaseUrl)
-                , (J9JpCom, J9Jp.Com.newReleaseUrl)
-                , (Manga9Co, Manga9.Co.newReleaseUrl)
-                , (SyoSetuTop, SyoSetu.Top.newReleaseUrl)
-                , (MangaHatachiCom, MangaHatachi.Com.newReleaseUrl)
-                ]
+  where
+    localMapping =
+        Map.fromList
+            [ (MangaRawIo, MangaRaw.Io.newReleaseUrl)
+            , (RawDevArtCom, RawDevArt.Com.newReleaseUrl)
+            , (WeLoMaArt, WeLoMa.Art.newReleaseUrl)
+            , (WeLoveMangaOne, WeLoveManga.One.newReleaseUrl)
+            , (KlMangaNet, KlManga.Net.newReleaseUrl)
+            , (MangaGunCom, MangaGun.Com.newReleaseUrl)
+            , (J9JpCom, J9Jp.Com.newReleaseUrl)
+            , (Manga9Co, Manga9.Co.newReleaseUrl)
+            , (SyoSetuTop, SyoSetu.Top.newReleaseUrl)
+            , (HachiMangaCom, MangaHatachi.Com.newReleaseUrl)
+            ]
 
 
 keyElement :: forall env s. (HasStateRef s env, HasApp s) => RIO env Text
 keyElement = do
     web <- currentWeb <%= id
     maybe (throwM $ LookupWebFailed web) return $ localMapping ^? ix web
-    where
-        localMapping =
-            Map.fromList
-                [ (MangaRawIo, MangaRaw.Io.keyElement)
-                , (RawDevArtCom, RawDevArt.Com.keyElement)
-                , (WeLoMaArt, WeLoMa.Art.keyElement)
-                , (WeLoveMangaOne, WeLoveManga.One.keyElement)
-                , (KlMangaNet, KlManga.Net.keyElement)
-                , (MangaGunCom, MangaGun.Com.keyElement)
-                , (J9JpCom, J9Jp.Com.keyElement)
-                , (Manga9Co, Manga9.Co.keyElement)
-                , (SyoSetuTop, SyoSetu.Top.keyElement)
-                , (MangaHatachiCom, MangaHatachi.Com.keyElement)
-                ]
+  where
+    localMapping =
+        Map.fromList
+            [ (MangaRawIo, MangaRaw.Io.keyElement)
+            , (RawDevArtCom, RawDevArt.Com.keyElement)
+            , (WeLoMaArt, WeLoMa.Art.keyElement)
+            , (WeLoveMangaOne, WeLoveManga.One.keyElement)
+            , (KlMangaNet, KlManga.Net.keyElement)
+            , (MangaGunCom, MangaGun.Com.keyElement)
+            , (J9JpCom, J9Jp.Com.keyElement)
+            , (Manga9Co, Manga9.Co.keyElement)
+            , (SyoSetuTop, SyoSetu.Top.keyElement)
+            , (HachiMangaCom, MangaHatachi.Com.keyElement)
+            ]
 
 
 scrapeComics :: forall env s. (HasStateRef s env, HasApp s) => TL.Text -> RIO env [Try (URI, Maybe ReleaseInfo)]
@@ -115,21 +114,21 @@ scrapeComics markup = do
     domainName <- maybe (throwM $ LookupWebFailed web) return $ webTab ^? ix web . _1
     focusComics <- maybe (throwM $ LookupWebFailed web) return $ localMapping ^? ix web
     return $ markup ^.. html . focusComics . filtered (check domainName)
-    where
-        check domainName entry = entry ^? _Right . _1 . domain `elem` [Nothing, Just domainName]
-        localMapping =
-            Map.fromList
-                [ (MangaRawIo, MangaRaw.Io.focusComics)
-                , (RawDevArtCom, RawDevArt.Com.focusComics)
-                , (WeLoMaArt, WeLoMa.Art.focusComics)
-                , (WeLoveMangaOne, WeLoveManga.One.focusComics)
-                , (KlMangaNet, KlManga.Net.focusComics)
-                , (MangaGunCom, MangaGun.Com.focusComics)
-                , (J9JpCom, J9Jp.Com.focusComics)
-                , (Manga9Co, Manga9.Co.focusComics)
-                , (SyoSetuTop, SyoSetu.Top.focusComics)
-                , (MangaHatachiCom, MangaHatachi.Com.focusComics)
-                ]
+  where
+    check domainName entry = entry ^? _Right . _1 . domain `elem` [Nothing, Just domainName]
+    localMapping =
+        Map.fromList
+            [ (MangaRawIo, MangaRaw.Io.focusComics)
+            , (RawDevArtCom, RawDevArt.Com.focusComics)
+            , (WeLoMaArt, WeLoMa.Art.focusComics)
+            , (WeLoveMangaOne, WeLoveManga.One.focusComics)
+            , (KlMangaNet, KlManga.Net.focusComics)
+            , (MangaGunCom, MangaGun.Com.focusComics)
+            , (J9JpCom, J9Jp.Com.focusComics)
+            , (Manga9Co, Manga9.Co.focusComics)
+            , (SyoSetuTop, SyoSetu.Top.focusComics)
+            , (HachiMangaCom, MangaHatachi.Com.focusComics)
+            ]
 
 
 scrapeLatestRelInfo :: forall env s. (HasStateRef s env, HasApp s) => TL.Text -> RIO env (Maybe (Try URI))
@@ -137,20 +136,20 @@ scrapeLatestRelInfo markup = do
     web <- currentWeb <%= id
     focusLatestRelInfo <- maybe (throwM $ LookupWebFailed web) return $ localMapping ^? ix web
     return $ markup ^? html . focusLatestRelInfo
-    where
-        localMapping =
-            Map.fromList
-                [ (MangaRawIo, MangaRaw.Io.focusLatestRelInfo)
-                , (RawDevArtCom, RawDevArt.Com.focusLatestRelInfo)
-                , (WeLoMaArt, WeLoMa.Art.focusLatestRelInfo)
-                , (WeLoveMangaOne, WeLoveManga.One.focusLatestRelInfo)
-                , (KlMangaNet, KlManga.Net.focusLatestRelInfo)
-                , (MangaGunCom, MangaGun.Com.focusLatestRelInfo)
-                , (J9JpCom, J9Jp.Com.focusLatestRelInfo)
-                , (Manga9Co, Manga9.Co.focusLatestRelInfo)
-                , (SyoSetuTop, SyoSetu.Top.focusLatestRelInfo)
-                , (MangaHatachiCom, MangaHatachi.Com.focusLatestRelInfo)
-                ]
+  where
+    localMapping =
+        Map.fromList
+            [ (MangaRawIo, MangaRaw.Io.focusLatestRelInfo)
+            , (RawDevArtCom, RawDevArt.Com.focusLatestRelInfo)
+            , (WeLoMaArt, WeLoMa.Art.focusLatestRelInfo)
+            , (WeLoveMangaOne, WeLoveManga.One.focusLatestRelInfo)
+            , (KlMangaNet, KlManga.Net.focusLatestRelInfo)
+            , (MangaGunCom, MangaGun.Com.focusLatestRelInfo)
+            , (J9JpCom, J9Jp.Com.focusLatestRelInfo)
+            , (Manga9Co, Manga9.Co.focusLatestRelInfo)
+            , (SyoSetuTop, SyoSetu.Top.focusLatestRelInfo)
+            , (HachiMangaCom, MangaHatachi.Com.focusLatestRelInfo)
+            ]
 
 
 badChapters :: [URI]
@@ -167,20 +166,20 @@ scrapeRelInfos markup = do
     web <- currentWeb <%= id
     focusRelInfos <- maybe (throwM $ LookupWebFailed web) return $ localMapping ^? ix web
     return $ markup ^.. html . focusRelInfos . filteredBy (_Right . _2 . to (`notElem` badChapters))
-    where
-        localMapping =
-            Map.fromList
-                [ (MangaRawIo, MangaRaw.Io.focusRelInfos)
-                , (RawDevArtCom, RawDevArt.Com.focusRelInfos)
-                , (WeLoMaArt, WeLoMa.Art.focusRelInfos)
-                , (WeLoveMangaOne, WeLoveManga.One.focusRelInfos)
-                , (KlMangaNet, KlManga.Net.focusRelInfos)
-                , (MangaGunCom, MangaGun.Com.focusRelInfos)
-                , (J9JpCom, J9Jp.Com.focusRelInfos)
-                , (Manga9Co, Manga9.Co.focusRelInfos)
-                , (SyoSetuTop, SyoSetu.Top.focusRelInfos)
-                , (MangaHatachiCom, MangaHatachi.Com.focusRelInfos)
-                ]
+  where
+    localMapping =
+        Map.fromList
+            [ (MangaRawIo, MangaRaw.Io.focusRelInfos)
+            , (RawDevArtCom, RawDevArt.Com.focusRelInfos)
+            , (WeLoMaArt, WeLoMa.Art.focusRelInfos)
+            , (WeLoveMangaOne, WeLoveManga.One.focusRelInfos)
+            , (KlMangaNet, KlManga.Net.focusRelInfos)
+            , (MangaGunCom, MangaGun.Com.focusRelInfos)
+            , (J9JpCom, J9Jp.Com.focusRelInfos)
+            , (Manga9Co, Manga9.Co.focusRelInfos)
+            , (SyoSetuTop, SyoSetu.Top.focusRelInfos)
+            , (HachiMangaCom, MangaHatachi.Com.focusRelInfos)
+            ]
 
 
 scrapeRelInfo :: forall env s. (HasStateRef s env, HasApp s) => TL.Text -> RIO env [Try ReleaseInfo]
@@ -188,20 +187,20 @@ scrapeRelInfo markup = do
     web <- currentWeb <%= id
     focusRelInfos <- maybe (throwM $ LookupWebFailed web) return $ localMapping ^? ix web
     return $ markup ^.. html . focusRelInfos
-    where
-        localMapping =
-            Map.fromList
-                -- [ (MangaRawIo, MangaRaw.Io.focusRelInfo)
-                [ (RawDevArtCom, RawDevArt.Com.focusRelInfo)
-                , (WeLoMaArt, WeLoMa.Art.focusRelInfo)
-                , (WeLoveMangaOne, WeLoveManga.One.focusRelInfo)
-                , (KlMangaNet, KlManga.Net.focusRelInfo)
-                , (MangaGunCom, MangaGun.Com.focusRelInfo)
-                , (J9JpCom, J9Jp.Com.focusRelInfo)
-                , (Manga9Co, Manga9.Co.focusRelInfo)
-                , (SyoSetuTop, SyoSetu.Top.focusRelInfo)
-                , (MangaHatachiCom, MangaHatachi.Com.focusRelInfo)
-                ]
+  where
+    localMapping =
+        Map.fromList
+            -- [ (MangaRawIo, MangaRaw.Io.focusRelInfo)
+            [ (RawDevArtCom, RawDevArt.Com.focusRelInfo)
+            , (WeLoMaArt, WeLoMa.Art.focusRelInfo)
+            , (WeLoveMangaOne, WeLoveManga.One.focusRelInfo)
+            , (KlMangaNet, KlManga.Net.focusRelInfo)
+            , (MangaGunCom, MangaGun.Com.focusRelInfo)
+            , (J9JpCom, J9Jp.Com.focusRelInfo)
+            , (Manga9Co, Manga9.Co.focusRelInfo)
+            , (SyoSetuTop, SyoSetu.Top.focusRelInfo)
+            , (HachiMangaCom, MangaHatachi.Com.focusRelInfo)
+            ]
 
 
 scrapeImages :: forall env s. (HasStateRef s env, HasApp s) => TL.Text -> RIO env [Try URI]
@@ -209,17 +208,17 @@ scrapeImages markup = do
     web <- currentWeb <%= id
     focusImages <- maybe (throwM $ LookupWebFailed web) return $ localMapping ^? ix web
     return $ markup ^.. html . focusImages
-    where
-        localMapping =
-            Map.fromList
-                [ (MangaRawIo, MangaRaw.Io.focusImages)
-                , (RawDevArtCom, RawDevArt.Com.focusImages)
-                , (WeLoMaArt, WeLoMa.Art.focusImages)
-                , (WeLoveMangaOne, WeLoveManga.One.focusImages)
-                , (KlMangaNet, KlManga.Net.focusImages)
-                , (MangaGunCom, MangaGun.Com.focusImages)
-                , (J9JpCom, J9Jp.Com.focusImages)
-                , (Manga9Co, Manga9.Co.focusImages)
-                , (SyoSetuTop, SyoSetu.Top.focusImages)
-                , (MangaHatachiCom, MangaHatachi.Com.focusImages)
-                ]
+  where
+    localMapping =
+        Map.fromList
+            [ (MangaRawIo, MangaRaw.Io.focusImages)
+            , (RawDevArtCom, RawDevArt.Com.focusImages)
+            , (WeLoMaArt, WeLoMa.Art.focusImages)
+            , (WeLoveMangaOne, WeLoveManga.One.focusImages)
+            , (KlMangaNet, KlManga.Net.focusImages)
+            , (MangaGunCom, MangaGun.Com.focusImages)
+            , (J9JpCom, J9Jp.Com.focusImages)
+            , (Manga9Co, Manga9.Co.focusImages)
+            , (SyoSetuTop, SyoSetu.Top.focusImages)
+            , (HachiMangaCom, MangaHatachi.Com.focusImages)
+            ]

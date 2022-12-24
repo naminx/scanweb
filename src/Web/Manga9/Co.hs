@@ -3,7 +3,6 @@
 
 module Web.Manga9.Co where
 
-import App.Chapter
 import Import
 import Replace.Megaparsec (anyTill)
 import Text.Megaparsec (eof)
@@ -13,7 +12,7 @@ import Web.Common
 import qualified Web.Common.Manga1001 as Manga1001
 
 
-newReleaseUrl :: MonadThrow m => Page Int -> m URI
+newReleaseUrl :: MonadThrow m => Page -> m URI
 newReleaseUrl = Manga1001.newReleaseUrl
 
 

@@ -5,7 +5,6 @@
 
 module App.Tables where
 
-import App.Chapter (Chapter)
 import Database.Esqueleto.Experimental (
     InnerJoin (InnerJoin),
     SqlBackend,
@@ -18,7 +17,6 @@ import Database.Esqueleto.Experimental (
     (==.),
  )
 import Import hiding (domain, from, on, (^.))
-import Path (Dir, Path, Rel)
 import qualified RIO.List as L (foldl)
 import qualified RIO.Map as Map (fromList)
 import qualified RIO.Text as T (pack)
@@ -72,7 +70,7 @@ queryComicTable sqlBackend = do
     tryParseRow
         :: (MonadUnliftIO m, MonadThrow m)
         => m [(Comic, (Title, Path Rel Dir, Volume, Chapter))]
-        -> (Value Comic, Value Text, Value (Path Rel Dir), Value Volume, Value Chapter)
+        -> (Value Comic, Value Title, Value (Path Rel Dir), Value Volume, Value Chapter)
         -> m [(Comic, (Title, Path Rel Dir, Volume, Chapter))]
     tryParseRow acc args = do
         result <- tryAny $ parseRow args
@@ -85,13 +83,13 @@ queryComicTable sqlBackend = do
 
     parseRow
         :: MonadThrow m
-        => (Value Comic, Value Text, Value (Path Rel Dir), Value Volume, Value Chapter)
+        => (Value Comic, Value Title, Value (Path Rel Dir), Value Volume, Value Chapter)
         -> m (Comic, (Title, Path Rel Dir, Volume, Chapter))
     parseRow (comic, title, folder, volume, chapter) = do
         return
             ( unValue comic
             ,
-                ( Title $ unValue title
+                ( unValue title
                 , unValue folder
                 , unValue volume
                 , unValue chapter

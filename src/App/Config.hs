@@ -18,7 +18,7 @@ import  App.Config.Linux
 
 import Data.Default (Default (..))
 import Import hiding (wait)
-import Path (Abs, File, Path, Rel, SomeBase (Abs), relfile, (</>))
+import Path (Abs, File, SomeBase (Abs), relfile, (</>))
 import System.Time.Extra (Seconds)
 import Web.Api.WebDriver
 

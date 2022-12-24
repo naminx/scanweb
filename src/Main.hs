@@ -12,7 +12,6 @@
 
 module Main where
 
-import App.Chapter
 import App.Config
 import App.Tables
 import App.Types
@@ -27,7 +26,7 @@ import Database.Esqueleto.Internal.Internal (unsafeSqlBinOp)
 import Import hiding (from, on)
 import Init
 import Options
-import Path (SomeBase (..), (</>))
+import Path (Dir, Path, Rel, SomeBase (..), (</>))
 import Progs
 import RIO.Process
 import RIO.State
@@ -117,15 +116,15 @@ getProg appmode = case appmode of
     ListComics -> progListComics
 
 
-queryComics :: MonadUnliftIO m => [URI] -> m [(Comic, URI)]
+queryComics :: MonadUnliftIO m => [URI] -> m [(Comic, URI, ComicInfo)]
 queryComics [] = return []
 queryComics links =
     bracket (newSqlBackend defaultDbFile) (liftIO . close') $
-        (map (bimap unValue unValue) <$>) . runSqlConn query
+        (map unValues <$>) . runSqlConn query
   where
     (+||+) = unsafeSqlBinOp " || "
     query = select $ do
-        webs :& urls :& _comics <-
+        webs :& urls :& comics <-
             {- HLINT ignore "Fuse on/on" -}
             from
                 $ table @Webs `InnerJoin` table @Urls
@@ -134,4 +133,34 @@ queryComics links =
         let fullUrl = val [uri|https://|] +||+ webs.domain +||+ urls.path
         where_ $ fullUrl `in_` valList links
         orderBy $ map (asc . (fullUrl !=.) . val) links
-        pure (urls.comic, fullUrl)
+        pure (urls.comic, fullUrl, (comics.title, comics.folder, comics.volume, comics.chapter))
+    unValues (comic, uri_, comicInfo) =
+        (unValue comic, unValue uri_, unValues' comicInfo)
+      where
+        unValues' (title, path, volume, chapter) =
+            (unValue title, unValue path, unValue volume, unValue chapter)
+
+
+queryComic :: MonadUnliftIO m => Int -> m (Maybe ComicInfo)
+queryComic c =
+    bracket (newSqlBackend defaultDbFile) (liftIO . close') $
+        (fmap unValues . preview _head <$>) . runSqlConn query
+  where
+    query = select $ do
+        comics <- from $ table @Comics
+        where_ $ comics.comic ==. val (Comic c)
+        pure (comics.title, comics.folder, comics.volume, comics.chapter)
+    unValues (title, path, volume, chapter) =
+        (unValue title, unValue path, unValue volume, unValue chapter)
+
+
+queryWeb :: MonadUnliftIO m => URI -> m (Maybe Web)
+queryWeb url =
+    bracket (newSqlBackend defaultDbFile) (liftIO . close') $
+        (fmap unValues . preview _head <$>) . runSqlConn query
+  where
+    query = select $ do
+        webs <- from $ table @Webs
+        where_ $ webs.domain ==. val (url ^?! domain)
+        pure webs.web
+    unValues = unValue

@@ -4,7 +4,6 @@
 
 module Web.Common.Manga1001 where
 
-import App.Chapter
 import Import
 import qualified RIO.Text as T (pack)
 import Replace.Megaparsec (anyTill)
@@ -16,7 +15,7 @@ import Text.URI.QQ (uri)
 import Web.Common
 
 
-newReleaseUrl :: MonadThrow m => Page Int -> m URI
+newReleaseUrl :: MonadThrow m => Page -> m URI
 newReleaseUrl (Page n)
     -- This trailing slash is important to flag an ABSOLUTE path.
     | n == 1 = return [uri|/|]

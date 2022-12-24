@@ -4,7 +4,6 @@
 
 module Web.WeLoveManga.One where
 
-import App.Chapter
 import Import
 import Text.Megaparsec.Char (string)
 import Text.Taggy.Lens
@@ -12,7 +11,7 @@ import Web.Common
 import qualified Web.Common.WeLoveManga as WeLoveManga
 
 
-newReleaseUrl :: MonadThrow m => Page Int -> m URI
+newReleaseUrl :: MonadThrow m => Page -> m URI
 newReleaseUrl = WeLoveManga.newReleaseUrl
 
 

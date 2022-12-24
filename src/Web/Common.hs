@@ -4,7 +4,6 @@
 
 module Web.Common where
 
-import App.Chapter
 import App.Exceptions
 import Import
 import Text.Taggy.Lens

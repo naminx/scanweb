@@ -5,7 +5,6 @@
 
 module Web.Common.WeLoveManga where
 
-import App.Chapter
 import Data.Char (isSpace)
 import Import
 import qualified RIO.Text as T
@@ -19,7 +18,7 @@ import Web.Common
 
 -- import Debug.Trace
 
-newReleaseUrl :: MonadThrow m => Page Int -> m URI
+newReleaseUrl :: MonadThrow m => Page -> m URI
 newReleaseUrl (Page n)
     | n == 1 = return [uri|/manga-list.html?sort=last_update|]
     | otherwise = do

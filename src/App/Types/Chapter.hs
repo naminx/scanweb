@@ -1,13 +1,22 @@
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE NoImplicitPrelude #-}
 
-module App.Chapter (
+module App.Types.Chapter (
     Chapter (..),
     comicChapter,
     emptyChapter,
     mkChapter,
 ) where
 
+import Database.Esqueleto.Experimental (
+    PersistField (..),
+    PersistFieldSql (..),
+    PersistValue (PersistText),
+    SqlType (SqlString),
+ )
+import qualified Database.Esqueleto.Internal.Internal as ES (SqlString)
 import RIO
+import qualified RIO.Text as T (pack)
 import Text.Megaparsec (ParsecT, eof, runParser, single)
 import Text.Megaparsec.Char.Lexer (decimal)
 import Text.URI (ParseException (ParseException))
@@ -52,3 +61,20 @@ comicChapter = do
     chapter <- decimal
     section <- optional $ single '.' >> decimal
     return $ Chapter chapter section
+
+
+instance PersistField Chapter where
+    toPersistValue chapter = PersistText $ T.pack $ show chapter
+    fromPersistValue (PersistText t) = first toErrorMsg $ mkChapter t
+      where
+        toErrorMsg =
+            ("converting to `Chapter` failed\n" <>) . T.pack . displayException
+    fromPersistValue invalid =
+        Left $ "reading `Chapter` failed, expected `PersistText`, received: " <> T.pack (show invalid)
+
+
+instance PersistFieldSql Chapter where
+    sqlType _ = SqlString
+
+
+instance ES.SqlString Chapter

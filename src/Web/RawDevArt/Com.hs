@@ -4,7 +4,6 @@
 
 module Web.RawDevArt.Com where
 
-import App.Chapter
 import Import
 import qualified RIO.Text as T (pack)
 import Replace.Megaparsec (anyTill)
@@ -17,7 +16,7 @@ import Text.URI.QQ (queryKey, uri)
 import Web.Common
 
 
-newReleaseUrl :: MonadThrow m => Page Int -> m URI
+newReleaseUrl :: MonadThrow m => Page -> m URI
 newReleaseUrl (Page n)
     -- This trailing slash is important to flag an ABSOLUTE path.
     | n == 1 = return [uri|/|]
