@@ -1,24 +1,25 @@
 cabal-version: 1.12
 
--- This file has been generated from package.yaml by hpack version 0.34.4.
+-- This file has been generated from package.yaml by hpack version 0.35.0.
 --
 -- see: https://github.com/sol/hpack
 
 name:           scanweb
 version:        0.1.0.0
-description:    Please see the README on Github at <https://github.com/namin/scanweb#readme>
-homepage:       https://github.com/namin/scanweb#readme
-bug-reports:    https://github.com/namin/scanweb/issues
+description:    Please see the README on Github at <https://github.com/githubuser/scanweb#readme>
+homepage:       https://github.com/githubuser/scanweb#readme
+bug-reports:    https://github.com/githubuser/scanweb/issues
 author:         Author name here
 maintainer:     example@example.com
-copyright:      2021 Author name here
+copyright:      2022 Author name here
+license:        BSD3
 build-type:     Simple
 
 source-repository head
   type: git
-  location: https://github.com/namin/scanweb
+  location: https://github.com/githubuser/scanweb
 
-executable scanweb
+executable scanweb-exe
   main-is: Main.hs
   other-modules:
       App.Config
@@ -37,8 +38,8 @@ executable scanweb
       App.Types.Page
       App.Types.Path
       App.Types.Persist
-      App.Types.RText
       App.Types.ReleaseInfo
+      App.Types.RText
       App.Types.Title
       App.Types.URI
       App.Types.URL
@@ -52,8 +53,8 @@ executable scanweb
       Lib.Esqueleto
       Lib.Extra
       Lib.Lens
-      Lib.MIME
       Lib.Megaparsec
+      Lib.MIME
       Lib.RIO
       Lib.Taggy
       Lib.URI
@@ -78,15 +79,16 @@ executable scanweb
       Web.WeLoMa.Art
       Web.WeLoveManga.One
       WebDriver
+      Paths_scanweb
   hs-source-dirs:
       src
-  ghc-options: -threaded -rtsopts -with-rtsopts=-N -O2 -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wpartial-fields -Wredundant-constraints -Wno-missed-extra-shared-lib
+  ghc-options: -threaded -rtsopts -with-rtsopts=-N -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints
   build-depends:
       aeson
     , ansi-terminal
     , attoparsec
     , attoparsec-base64
-    , base
+    , base >=4.11 && <10
     , base64
     , bytestring
     , data-default
@@ -105,8 +107,8 @@ executable scanweb
     , monad-control
     , monad-logger
     , optparse-simple
-    , path-pieces
     , path
+    , path-pieces
     , persistent
     , persistent-sqlite
     , pretty-simple
@@ -116,7 +118,7 @@ executable scanweb
     , raw-strings-qq
     , replace-megaparsec
     , resourcet
-    , rio
+    , rio >=0.1.12.0
     , rio-orphans
     , scientific
     , script-monad

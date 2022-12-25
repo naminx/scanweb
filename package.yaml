@@ -1,0 +1,79 @@
+name:                scanweb
+version:             0.1.0.0
+github:              githubuser/scanweb
+license:             BSD3
+author:              Author name here
+maintainer:          example@example.com
+copyright:           2022 Author name here
+
+# Metadata used when publishing your package
+# synopsis:            Short description of your package
+# category:            Web
+
+# To avoid duplicated efforts in documentation and dealing with the
+# complications of embedding Haddock markup inside cabal files, it is
+# common to point users to the README.md file.
+description:         Please see the README on Github at <https://github.com/githubuser/scanweb#readme>
+
+executables:
+  scanweb-exe:
+    main:                Main.hs
+    source-dirs:         src
+    dependencies:
+    - base >= 4.11 && < 10
+    - rio >= 0.1.12.0
+    - aeson
+    - ansi-terminal
+    - attoparsec
+    - attoparsec-base64
+    - base64
+    - bytestring
+    - data-default
+    - directory
+    - esqueleto
+    - exceptions
+    - extra
+    - formatting
+    - ghc
+    - http-api-data
+    - http-client
+    - lens
+    - lens-aeson
+    - megaparsec
+    - modern-uri
+    - monad-control
+    - monad-logger
+    - optparse-simple
+    - path
+    - path-pieces
+    - persistent
+    - persistent-sqlite
+    - pretty-simple
+    - process
+    - purebred-email
+    - random
+    - raw-strings-qq
+    - replace-megaparsec
+    - resourcet
+    - rio-orphans
+    - scientific
+    - script-monad
+    - taggy-lens
+    - text
+    - transformers-base
+    - webdriver-w3c
+    - word8
+
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    - -Wall
+    - -Wcompat
+    - -Widentities
+    - -Wincomplete-record-updates
+    - -Wincomplete-uni-patterns
+    # -Wno-missing-export-lists
+    - -Wmissing-home-modules
+    - -Wpartial-fields
+    - -Wredundant-constraints
