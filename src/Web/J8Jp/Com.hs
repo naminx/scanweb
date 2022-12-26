@@ -2,7 +2,7 @@
 {-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE NoImplicitPrelude #-}
 
-module Web.J9Jp.Com where
+module Web.J8Jp.Com where
 
 import qualified Data.Text as T (replace)
 import Import

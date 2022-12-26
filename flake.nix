@@ -22,8 +22,8 @@
               lambdabot;
             #   chromedriver
             #   chromium;
-            # inherit (hp)
-            #   fourmolu;
+            inherit (hp)
+              fourmolu;
           };
           # overrides = self: super: { };
           # hlintCheck.enable = true;

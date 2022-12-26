@@ -51,14 +51,14 @@ import Text.URI (emptyURI, mkPathPiece, mkQueryValue, mkURI, render)
 import Text.URI.Lens (queryParam, uriPath, uriQuery)
 import Text.URI.QQ (queryKey, uri)
 
-import qualified Web.J9Jp.Com as J9Jp.Com
+import qualified Web.HachiManga.Com as HachiManga.Com
+import qualified Web.J8Jp.Com as J8Jp.Com
 import qualified Web.KlManga.Net as KlManga.Net
 import qualified Web.Manga9.Co as Manga9.Co
 import qualified Web.MangaGun.Com as MangaGun.Com
-import qualified Web.MangaHatachi.Com as MangaHatachi.Com
 import qualified Web.MangaRaw.Io as MangaRaw.Io
+import qualified Web.MangaRaw.So as MangaRaw.So
 import qualified Web.RawDevArt.Com as RawDevArt.Com
-import qualified Web.SyoSetu.Top as SyoSetu.Top
 import qualified Web.WeLoMa.Art as WeLoMa.Art
 import qualified Web.WeLoveManga.One as WeLoveManga.One
 
@@ -74,16 +74,16 @@ getNewReleaseUrl = do
   where
     localMapping =
         Map.fromList
-            [ (MangaRawIo, MangaRaw.Io.newReleaseUrl)
+            [ (MangaRawSo, MangaRaw.So.newReleaseUrl)
             , (RawDevArtCom, RawDevArt.Com.newReleaseUrl)
             , (WeLoMaArt, WeLoMa.Art.newReleaseUrl)
             , (WeLoveMangaOne, WeLoveManga.One.newReleaseUrl)
             , (KlMangaNet, KlManga.Net.newReleaseUrl)
+            , (HachiMangaCom, HachiManga.Com.newReleaseUrl)
+            , (J8JpCom, J8Jp.Com.newReleaseUrl)
+            , (MangaRawIo, MangaRaw.Io.newReleaseUrl)
             , (MangaGunCom, MangaGun.Com.newReleaseUrl)
-            , (J9JpCom, J9Jp.Com.newReleaseUrl)
             , (Manga9Co, Manga9.Co.newReleaseUrl)
-            , (SyoSetuTop, SyoSetu.Top.newReleaseUrl)
-            , (HachiMangaCom, MangaHatachi.Com.newReleaseUrl)
             ]
 
 
@@ -94,16 +94,16 @@ keyElement = do
   where
     localMapping =
         Map.fromList
-            [ (MangaRawIo, MangaRaw.Io.keyElement)
+            [ (MangaRawSo, MangaRaw.So.keyElement)
             , (RawDevArtCom, RawDevArt.Com.keyElement)
             , (WeLoMaArt, WeLoMa.Art.keyElement)
             , (WeLoveMangaOne, WeLoveManga.One.keyElement)
             , (KlMangaNet, KlManga.Net.keyElement)
+            , (HachiMangaCom, HachiManga.Com.keyElement)
+            , (J8JpCom, J8Jp.Com.keyElement)
+            , (MangaRawIo, MangaRaw.Io.keyElement)
             , (MangaGunCom, MangaGun.Com.keyElement)
-            , (J9JpCom, J9Jp.Com.keyElement)
             , (Manga9Co, Manga9.Co.keyElement)
-            , (SyoSetuTop, SyoSetu.Top.keyElement)
-            , (HachiMangaCom, MangaHatachi.Com.keyElement)
             ]
 
 
@@ -118,16 +118,16 @@ scrapeComics markup = do
     check domainName entry = entry ^? _Right . _1 . domain `elem` [Nothing, Just domainName]
     localMapping =
         Map.fromList
-            [ (MangaRawIo, MangaRaw.Io.focusComics)
+            [ (MangaRawSo, MangaRaw.So.focusComics)
             , (RawDevArtCom, RawDevArt.Com.focusComics)
             , (WeLoMaArt, WeLoMa.Art.focusComics)
             , (WeLoveMangaOne, WeLoveManga.One.focusComics)
             , (KlMangaNet, KlManga.Net.focusComics)
+            , (HachiMangaCom, HachiManga.Com.focusComics)
+            , (J8JpCom, J8Jp.Com.focusComics)
+            , (MangaRawIo, MangaRaw.Io.focusComics)
             , (MangaGunCom, MangaGun.Com.focusComics)
-            , (J9JpCom, J9Jp.Com.focusComics)
             , (Manga9Co, Manga9.Co.focusComics)
-            , (SyoSetuTop, SyoSetu.Top.focusComics)
-            , (HachiMangaCom, MangaHatachi.Com.focusComics)
             ]
 
 
@@ -139,16 +139,16 @@ scrapeLatestRelInfo markup = do
   where
     localMapping =
         Map.fromList
-            [ (MangaRawIo, MangaRaw.Io.focusLatestRelInfo)
+            [ (MangaRawSo, MangaRaw.So.focusLatestRelInfo)
             , (RawDevArtCom, RawDevArt.Com.focusLatestRelInfo)
             , (WeLoMaArt, WeLoMa.Art.focusLatestRelInfo)
             , (WeLoveMangaOne, WeLoveManga.One.focusLatestRelInfo)
             , (KlMangaNet, KlManga.Net.focusLatestRelInfo)
+            , (HachiMangaCom, HachiManga.Com.focusLatestRelInfo)
+            , (J8JpCom, J8Jp.Com.focusLatestRelInfo)
+            , (MangaRawIo, MangaRaw.Io.focusLatestRelInfo)
             , (MangaGunCom, MangaGun.Com.focusLatestRelInfo)
-            , (J9JpCom, J9Jp.Com.focusLatestRelInfo)
             , (Manga9Co, Manga9.Co.focusLatestRelInfo)
-            , (SyoSetuTop, SyoSetu.Top.focusLatestRelInfo)
-            , (HachiMangaCom, MangaHatachi.Com.focusLatestRelInfo)
             ]
 
 
@@ -169,16 +169,16 @@ scrapeRelInfos markup = do
   where
     localMapping =
         Map.fromList
-            [ (MangaRawIo, MangaRaw.Io.focusRelInfos)
+            [ (MangaRawSo, MangaRaw.So.focusRelInfos)
             , (RawDevArtCom, RawDevArt.Com.focusRelInfos)
             , (WeLoMaArt, WeLoMa.Art.focusRelInfos)
             , (WeLoveMangaOne, WeLoveManga.One.focusRelInfos)
             , (KlMangaNet, KlManga.Net.focusRelInfos)
+            , (HachiMangaCom, HachiManga.Com.focusRelInfos)
+            , (J8JpCom, J8Jp.Com.focusRelInfos)
+            , (MangaRawIo, MangaRaw.Io.focusRelInfos)
             , (MangaGunCom, MangaGun.Com.focusRelInfos)
-            , (J9JpCom, J9Jp.Com.focusRelInfos)
             , (Manga9Co, Manga9.Co.focusRelInfos)
-            , (SyoSetuTop, SyoSetu.Top.focusRelInfos)
-            , (HachiMangaCom, MangaHatachi.Com.focusRelInfos)
             ]
 
 
@@ -190,16 +190,16 @@ scrapeRelInfo markup = do
   where
     localMapping =
         Map.fromList
-            -- [ (MangaRawIo, MangaRaw.Io.focusRelInfo)
-            [ (RawDevArtCom, RawDevArt.Com.focusRelInfo)
+            [ -- (MangaRawSo, MangaRaw.So.focusRelInfo)
+              (RawDevArtCom, RawDevArt.Com.focusRelInfo)
             , (WeLoMaArt, WeLoMa.Art.focusRelInfo)
             , (WeLoveMangaOne, WeLoveManga.One.focusRelInfo)
             , (KlMangaNet, KlManga.Net.focusRelInfo)
-            , (MangaGunCom, MangaGun.Com.focusRelInfo)
-            , (J9JpCom, J9Jp.Com.focusRelInfo)
+            , (HachiMangaCom, HachiManga.Com.focusRelInfo)
+            , (J8JpCom, J8Jp.Com.focusRelInfo)
+            , -- (MangaRawIo, MangaRaw.Io.focusRelInfo)
+              (MangaGunCom, MangaGun.Com.focusRelInfo)
             , (Manga9Co, Manga9.Co.focusRelInfo)
-            , (SyoSetuTop, SyoSetu.Top.focusRelInfo)
-            , (HachiMangaCom, MangaHatachi.Com.focusRelInfo)
             ]
 
 
@@ -211,14 +211,14 @@ scrapeImages markup = do
   where
     localMapping =
         Map.fromList
-            [ (MangaRawIo, MangaRaw.Io.focusImages)
+            [ (MangaRawSo, MangaRaw.So.focusImages)
             , (RawDevArtCom, RawDevArt.Com.focusImages)
             , (WeLoMaArt, WeLoMa.Art.focusImages)
             , (WeLoveMangaOne, WeLoveManga.One.focusImages)
             , (KlMangaNet, KlManga.Net.focusImages)
+            , (HachiMangaCom, HachiManga.Com.focusImages)
+            , (J8JpCom, J8Jp.Com.focusImages)
+            , (MangaRawIo, MangaRaw.Io.focusImages)
             , (MangaGunCom, MangaGun.Com.focusImages)
-            , (J9JpCom, J9Jp.Com.focusImages)
             , (Manga9Co, Manga9.Co.focusImages)
-            , (SyoSetuTop, SyoSetu.Top.focusImages)
-            , (HachiMangaCom, MangaHatachi.Com.focusImages)
             ]

@@ -22,14 +22,14 @@ import Web.PathPieces (PathPiece (..), readFromPathPiece, showToPathPiece)
 
 
 data Web
-    = MangaRawIo
+    = MangaRawSo
     | RawDevArtCom
     | WeLoMaArt
     | WeLoveMangaOne
     | KlMangaNet
     | HachiMangaCom
-    | J9JpCom
-    | SyoSetuTop
+    | J8JpCom
+    | MangaRawIo
     | MangaGunCom
     | Manga9Co
     deriving (Bounded, Eq, Generic, Ord, Read, Show)
@@ -38,14 +38,14 @@ data Web
 
 instance IsoEnum Web where
     mapping =
-        [ (0, MangaRawIo)
+        [ (0, MangaRawSo)
         , (1, RawDevArtCom)
         , (2, WeLoMaArt)
         , (3, WeLoveMangaOne)
         , (4, KlMangaNet)
         , (5, HachiMangaCom)
-        , (6, J9JpCom)
-        , (7, SyoSetuTop)
+        , (6, J8JpCom)
+        , (7, MangaRawIo)
         , (8, MangaGunCom)
         , (9, Manga9Co)
         ]

@@ -82,7 +82,7 @@ modeScanWebs =
                     , WeLoveMangaOne
                     , KlMangaNet
                     , HachiMangaCom
-                    , J9JpCom
+                    , J8JpCom
                     ]
                 <> help
                     ( "Scan specified webs (default mode), such as 1-3,5,7-9 "

@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE NoImplicitPrelude #-}
 
-module Web.MangaHatachi.Com where
+module Web.HachiManga.Com where
 
 import Import
 import qualified Web.Common.MangaHatachi as MangaHatachi

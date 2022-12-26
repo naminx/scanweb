@@ -16,7 +16,7 @@ copyright:           2022 Author name here
 description:         Please see the README on Github at <https://github.com/githubuser/scanweb#readme>
 
 executables:
-  scanweb-exe:
+  scanweb:
     main:                Main.hs
     source-dirs:         src
     dependencies:
@@ -73,7 +73,6 @@ executables:
     - -Widentities
     - -Wincomplete-record-updates
     - -Wincomplete-uni-patterns
-    # -Wno-missing-export-lists
     - -Wmissing-home-modules
     - -Wpartial-fields
     - -Wredundant-constraints
