@@ -67,8 +67,7 @@ focusLatestRelInfo =
         . tryParseURI
   where
     divChaptersContainer =
-        allNamed (only "div")
-            . attributed (hasClass "chapters-container")
+        allNamed (only "div") . attributed (hasClass "chapters-container")
 
 
 focusRelInfos :: Fold Node (Try (ReleaseInfo, URI))
@@ -95,6 +94,26 @@ focusRelInfos =
 
     url :: Fold Element (Try URI)
     url = attr "href" . tryParseURI
+
+
+focusRelInfo :: Fold Node (Try ReleaseInfo)
+focusRelInfo =
+    taking 1 divChaptersDropdown . optionSelected . relInfo
+  where
+    divChaptersDropdown =
+        allNamed (only "div") . attributed (hasClass "chapters-dropdown")
+    optionSelected =
+        allNamed (only "option") . attributed (ix "selected" . only "true")
+
+    relInfo =
+        to (preview contents)
+            . tryParseChapter mkChapterNo
+            . to (fmap Episode)
+      where
+        mkChapterNo = parseEither $ do
+            chap <- comicChapter
+            _ <- string "話"
+            return chap
 
 
 focusImages :: Fold Node (Try URI)

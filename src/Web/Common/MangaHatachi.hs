@@ -32,14 +32,19 @@ webIdentity = "a.logo"
 
 
 focusComics :: Fold Node (Try (URI, Maybe ReleaseInfo))
-focusComics = divMainColInnerCPage . divItemSummary . liftFold2 (liftA2 (,)) comics relInfo
+focusComics =
+    divMainColInnerCPage
+        . divItemSummary
+        . liftFold2 (liftA2 (,)) comics relInfo
   where
     divMainColInnerCPage =
         allNamed (only "div")
             . attributed (hasClasses ["main-col-inner", "c-page"])
             . notAttributed (hasClass "main-sticky-mangas")
 
-    divItemSummary = allNamed (only "div") . attributed (hasClass "item-summary")
+    divItemSummary =
+        allNamed (only "div")
+            . attributed (hasClass "item-summary")
 
     comics :: Fold Element (Try URI)
     comics = h3H5 . anchor . attr "href" . tryParseURI
@@ -53,10 +58,14 @@ focusComics = divMainColInnerCPage . divItemSummary . liftFold2 (liftA2 (,)) com
             . tryParseRelInfo
             . to (fmap Just)
 
-    divChapterItem = allNamed (only "div") . attributed (hasClass "chapter-item")
+    divChapterItem =
+        allNamed (only "div")
+            . attributed (hasClass "chapter-item")
 
     tryParseRelInfo :: ToLike (Maybe Text) (Try ReleaseInfo)
-    tryParseRelInfo = to (maybeToTry ChapterNoNotFound) . to (>>= T.strip >>> mkReleaseInfo)
+    tryParseRelInfo =
+        to (maybeToTry ChapterNoNotFound)
+            . to (>>= T.strip >>> mkReleaseInfo)
 
 
 focusLatestRelInfo :: Fold Node (Try URI)
@@ -65,10 +74,17 @@ focusLatestRelInfo = noLatestRelInfo
 
 focusRelInfos :: Fold Node (Try (ReleaseInfo, URI))
 focusRelInfos =
-    backwards $ liWpMangaChapter . anchorNotCNewTag . liftFold2 (liftA2 (,)) relInfo url
+    backwards $
+        liWpMangaChapter
+            . anchorNotCNewTag
+            . liftFold2 (liftA2 (,)) relInfo url
   where
-    liWpMangaChapter = allNamed (only "li") . attributed (hasClass "wp-manga-chapter")
-    anchorNotCNewTag = allNamed (only "a") . notAttributed (hasClass "c-new-tag")
+    liWpMangaChapter =
+        allNamed (only "li")
+            . attributed (hasClass "wp-manga-chapter")
+    anchorNotCNewTag =
+        allNamed (only "a")
+            . notAttributed (hasClass "c-new-tag")
 
     relInfo :: ToLike Element (Try ReleaseInfo)
     relInfo = to (preview $ contents . to T.strip) . tryParseRelInfo
@@ -77,15 +93,22 @@ focusRelInfos =
     url = attr "href" . tryParseURI
 
     tryParseRelInfo :: ToLike (Maybe Text) (Try ReleaseInfo)
-    tryParseRelInfo = to (maybeToTry ChapterNoNotFound) . to (>>= mkReleaseInfo)
+    tryParseRelInfo =
+        to (maybeToTry ChapterNoNotFound)
+            . to (>>= mkReleaseInfo)
 
 
 focusRelInfo :: Fold Node (Try ReleaseInfo)
 focusRelInfo =
     taking 1 selectSingleChapter . optionSelected . relInfo
   where
-    selectSingleChapter = allNamed (only "select") . attributed (hasClass "single-chapter-select")
-    optionSelected = elements . allNamed (only "option") . attributed (ix "selected" . only "selected")
+    selectSingleChapter =
+        allNamed (only "select")
+            . attributed (hasClass "single-chapter-select")
+    optionSelected =
+        elements
+            . allNamed (only "option")
+            . attributed (ix "selected" . only "selected")
 
     relInfo = attr "value" . tryParseChapter mkChapterNo . to (fmap Episode)
       where
@@ -97,9 +120,15 @@ mkReleaseInfo = parseEither relInfo
   where
     relInfo = MP.try episode <|> MP.try book <|> episodes
 
-    episode = string "第" >> comicChapter >>= (string "話" >>) . return . Episode
+    episode =
+        string "第"
+            >> comicChapter
+            >>= (string "話" >>) . return . Episode
 
-    book = string "第" >> decimal >>= (string "巻" >>) . return . Book . Volume
+    book =
+        string "第"
+            >> decimal
+            >>= (string "巻" >>) . return . Book . Volume
 
     episodes = do
         _ <- string "第"
@@ -114,4 +143,6 @@ focusImages :: Fold Node (Try URI)
 focusImages =
     imgWpMangaChapterImg . attr "data-src" . to (fmap T.strip) . tryParseURI
   where
-    imgWpMangaChapterImg = allNamed (only "img") . attributed (hasClass "wp-manga-chapter-img")
+    imgWpMangaChapterImg =
+        allNamed (only "img")
+            . attributed (hasClass "wp-manga-chapter-img")

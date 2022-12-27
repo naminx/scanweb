@@ -7,6 +7,7 @@ module Web.MangaRaw.Io where
 import Import
 import qualified RIO.Text as T (pack)
 import Replace.Megaparsec (anyTill)
+import Text.Megaparsec (eof)
 import Text.Megaparsec.Char (string)
 import Text.Taggy.Lens
 import Text.URI (mkPathPiece)
@@ -61,6 +62,28 @@ focusRelInfos =
 
     url :: Fold Element (Try URI)
     url = attr "href" . tryParseURI
+
+
+focusRelInfo :: Fold Node (Try ReleaseInfo)
+focusRelInfo =
+    taking 1 selectFormSelect . optionSelected . relInfo
+  where
+    selectFormSelect =
+        allNamed (only "select") . attributed (hasClass "form-select")
+    optionSelected =
+        allNamed (only "option") . attributed (ix "selected" . only "true")
+
+    relInfo =
+        to (preview contents)
+            . tryParseChapter mkChapterNo
+            . to (fmap Episode)
+      where
+        mkChapterNo = parseEither $ do
+            _ <- string "【第"
+            chap <- comicChapter
+            _ <- string "話】"
+            _ <- anyTill eof
+            return chap
 
 
 focusImages :: Fold Node (Try URI)

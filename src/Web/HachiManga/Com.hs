@@ -4,6 +4,11 @@
 module Web.HachiManga.Com where
 
 import Import
+import Replace.Megaparsec (anyTill)
+import Text.Megaparsec (eof)
+import Text.Megaparsec.Char (string)
+import Text.Taggy.Lens
+import Web.Common
 import qualified Web.Common.MangaHatachi as MangaHatachi
 
 
@@ -28,7 +33,28 @@ focusRelInfos = MangaHatachi.focusRelInfos
 
 
 focusRelInfo :: Fold Node (Try ReleaseInfo)
-focusRelInfo = MangaHatachi.focusRelInfo
+focusRelInfo =
+    taking 1 selectSingleChapter . optionSelected . relInfo
+  where
+    selectSingleChapter =
+        allNamed (only "select")
+            . attributed (hasClass "single-chapter-select")
+    optionSelected =
+        elements
+            . allNamed (only "option")
+            . attributed (ix "selected" . only "selected")
+
+    relInfo =
+        to (preview contents)
+            . tryParseChapter mkChapterNo
+            . to (fmap Episode)
+      where
+        mkChapterNo = parseEither $ do
+            _ <- anyTill $ string "第"
+            chap <- comicChapter
+            _ <- string "話"
+            _ <- anyTill eof
+            return chap
 
 
 focusImages :: Fold Node (Try URI)

@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE NoImplicitPrelude #-}
 
-module Web.Manga9.Co where
+module Web.Manga1001.In where
 
 import Import
 import Replace.Megaparsec (anyTill)
