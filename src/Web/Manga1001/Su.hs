@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE NoImplicitPrelude #-}
 
-module Web.Manga1001.In where
+module Web.Manga1001.Su where
 
 import Import
 import Replace.Megaparsec (anyTill)
@@ -21,12 +21,7 @@ keyElement = Manga1001.keyElement
 
 
 focusComics :: Fold Node (Try (URI, Maybe ReleaseInfo))
-focusComics = divRotateImg . liftFold2 (liftA2 (,)) comics noRelInfo
-  where
-    divRotateImg = allNamed (only "div") . attributed (hasClass "rotate-img")
-
-    comics :: ToLike Element (Try URI)
-    comics = to (view $ taking 1 anchor . attr "href") . tryParseURI
+focusComics = Manga1001.focusComics
 
 
 focusLatestRelInfo :: Fold Node (Try URI)
@@ -35,9 +30,9 @@ focusLatestRelInfo = noLatestRelInfo
 
 focusRelInfos :: Fold Node (Try (ReleaseInfo, URI))
 focusRelInfos =
-    divListScroll . backwards (anchor . liftFold2 (liftA2 (,)) relInfo url)
+    backwards (anchorChapterColor . liftFold2 (liftA2 (,)) relInfo url)
   where
-    divListScroll = allNamed (only "div") . attributed (hasClass "list-scoll")
+    anchorChapterColor = anchor . attributed (hasClass "chapter-color")
 
     relInfo :: ToLike Element (Try ReleaseInfo)
     relInfo =
@@ -57,9 +52,10 @@ focusRelInfos =
 
 focusRelInfo :: Fold Node (Try ReleaseInfo)
 focusRelInfo =
-    taking 1 divFormGroup . optionSelected . relInfo
+    taking 1 divChapterList2 . optionSelected . relInfo
   where
-    divFormGroup = allNamed (only "div") . attributed (hasClass "form-group")
+    divChapterList2 =
+        allNamed (only "div") . attributed (hasClass "chapterlist2")
     optionSelected = allNamed (only "option") . attributed (ix "selected")
     relInfo =
         to (preview contents)
@@ -67,12 +63,17 @@ focusRelInfo =
             . to (fmap Episode)
       where
         mkChapterNo = parseEither $ do
-            _ <- string "【第"
             chap <- comicChapter
-            _ <- string "話】"
+            _ <- string "話"
             _ <- anyTill eof
             return chap
 
 
 focusImages :: Fold Node (Try URI)
-focusImages = Manga1001.focusImages
+focusImages =
+    figureWpBlockImage . image . url
+  where
+    figureWpBlockImage =
+        allNamed (only "figure") . attributed (hasClass "wp-block-image")
+    image = elements . named (only "img")
+    url = attr "data-src" . tryParseURI

@@ -50,10 +50,26 @@ instance Show Chapter where
         Just e -> show c <> "." <> show e
 
 
-mkChapter :: MonadThrow m => Text -> m Chapter
-mkChapter chapter = case runParser (comicChapter <* eof) "" chapter of
-    Left err -> throwM $ ParseException err
-    Right chapter' -> return chapter'
+instance PersistField Chapter where
+    toPersistValue chapter = PersistText $ T.pack $ show chapter
+    fromPersistValue (PersistText t) = first toErrorMsg $ mkChapter t
+      where
+        toErrorMsg =
+            ("converting to `Chapter` failed\n" <>)
+                . T.pack
+                . displayException
+    fromPersistValue invalid =
+        Left $
+            "reading `Chapter` failed"
+                <> ", expected `PersistText`"
+                <> (", received: " <> T.pack (show invalid))
+
+
+instance PersistFieldSql Chapter where
+    sqlType _ = SqlString
+
+
+instance ES.SqlString Chapter
 
 
 comicChapter :: Parser m Chapter
@@ -63,18 +79,7 @@ comicChapter = do
     return $ Chapter chapter section
 
 
-instance PersistField Chapter where
-    toPersistValue chapter = PersistText $ T.pack $ show chapter
-    fromPersistValue (PersistText t) = first toErrorMsg $ mkChapter t
-      where
-        toErrorMsg =
-            ("converting to `Chapter` failed\n" <>) . T.pack . displayException
-    fromPersistValue invalid =
-        Left $ "reading `Chapter` failed, expected `PersistText`, received: " <> T.pack (show invalid)
-
-
-instance PersistFieldSql Chapter where
-    sqlType _ = SqlString
-
-
-instance ES.SqlString Chapter
+mkChapter :: MonadThrow m => Text -> m Chapter
+mkChapter chapter = case runParser (comicChapter <* eof) "" chapter of
+    Left err -> throwM $ ParseException err
+    Right chapter' -> return chapter'

@@ -11,7 +11,13 @@ import Text.URI (emptyURI, mkURI)
 
 
 tryParseChapter :: (Text -> Try Chapter) -> ToLike (Maybe Text) (Try Chapter)
-tryParseChapter mkChapterNo = to $ maybeToTry ChapterNoNotFound >>> (>>= mkChapterNo)
+tryParseChapter mkChapterNo =
+    to $ maybeToTry ChapterNoNotFound >>> (>>= mkChapterNo)
+
+
+tryParseRelInfo :: (Text -> Try ReleaseInfo) -> ToLike (Maybe Text) (Try ReleaseInfo)
+tryParseRelInfo mkRelInfo =
+    to $ maybeToTry ChapterNoNotFound >>> (>>= mkRelInfo)
 
 
 tryParseURI :: ToLike (Maybe Text) (Try URI)

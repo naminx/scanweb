@@ -53,7 +53,7 @@ import Text.URI.QQ (queryKey, uri)
 import qualified Web.HachiManga.Com as HachiManga.Com
 import qualified Web.J8Jp.Com as J8Jp.Com
 import qualified Web.KlManga.Net as KlManga.Net
-import qualified Web.Manga1001.In as Manga1001.In
+import qualified Web.Manga1001.Su as Manga1001.Su
 import qualified Web.MangaGun.Com as MangaGun.Com
 import qualified Web.MangaRaw.Io as MangaRaw.Io
 import qualified Web.MangaRaw.So as MangaRaw.So
@@ -82,7 +82,7 @@ getNewReleaseUrl = do
             , (J8JpCom, J8Jp.Com.newReleaseUrl)
             , (MangaRawIo, MangaRaw.Io.newReleaseUrl)
             , (MangaGunCom, MangaGun.Com.newReleaseUrl)
-            , (Manga1001In, Manga1001.In.newReleaseUrl)
+            , (Manga1001Su, Manga1001.Su.newReleaseUrl)
             ]
 
 
@@ -102,7 +102,7 @@ keyElement = do
             , (J8JpCom, J8Jp.Com.keyElement)
             , (MangaRawIo, MangaRaw.Io.keyElement)
             , (MangaGunCom, MangaGun.Com.keyElement)
-            , (Manga1001In, Manga1001.In.keyElement)
+            , (Manga1001Su, Manga1001.Su.keyElement)
             ]
 
 
@@ -126,7 +126,7 @@ scrapeComics markup = do
             , (J8JpCom, J8Jp.Com.focusComics)
             , (MangaRawIo, MangaRaw.Io.focusComics)
             , (MangaGunCom, MangaGun.Com.focusComics)
-            , (Manga1001In, Manga1001.In.focusComics)
+            , (Manga1001Su, Manga1001.Su.focusComics)
             ]
 
 
@@ -147,7 +147,7 @@ scrapeLatestRelInfo markup = do
             , (J8JpCom, J8Jp.Com.focusLatestRelInfo)
             , (MangaRawIo, MangaRaw.Io.focusLatestRelInfo)
             , (MangaGunCom, MangaGun.Com.focusLatestRelInfo)
-            , (Manga1001In, Manga1001.In.focusLatestRelInfo)
+            , (Manga1001Su, Manga1001.Su.focusLatestRelInfo)
             ]
 
 
@@ -177,7 +177,7 @@ scrapeRelInfos markup = do
             , (J8JpCom, J8Jp.Com.focusRelInfos)
             , (MangaRawIo, MangaRaw.Io.focusRelInfos)
             , (MangaGunCom, MangaGun.Com.focusRelInfos)
-            , (Manga1001In, Manga1001.In.focusRelInfos)
+            , (Manga1001Su, Manga1001.Su.focusRelInfos)
             ]
 
 
@@ -198,7 +198,7 @@ scrapeRelInfo markup = do
             , (J8JpCom, J8Jp.Com.focusRelInfo)
             , -- (MangaRawIo, MangaRaw.Io.focusRelInfo)
               (MangaGunCom, MangaGun.Com.focusRelInfo)
-            , (Manga1001In, Manga1001.In.focusRelInfo)
+            , (Manga1001Su, Manga1001.Su.focusRelInfo)
             ]
 
 
@@ -219,5 +219,5 @@ scrapeImages markup = do
             , (J8JpCom, J8Jp.Com.focusImages)
             , (MangaRawIo, MangaRaw.Io.focusImages)
             , (MangaGunCom, MangaGun.Com.focusImages)
-            , (Manga1001In, Manga1001.In.focusImages)
+            , (Manga1001Su, Manga1001.Su.focusImages)
             ]

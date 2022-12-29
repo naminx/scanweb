@@ -31,7 +31,7 @@ data Web
     | J8JpCom
     | MangaRawIo
     | MangaGunCom
-    | Manga1001In
+    | Manga1001Su
     deriving (Bounded, Eq, Generic, Ord, Read, Show)
     deriving (Enum) via WOE Web
 
@@ -47,7 +47,7 @@ instance IsoEnum Web where
         , (6, J8JpCom)
         , (7, MangaRawIo)
         , (8, MangaGunCom)
-        , (9, Manga1001In)
+        , (9, Manga1001Su)
         ]
 
 

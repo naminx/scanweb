@@ -5,6 +5,9 @@ module App.Types.ReleaseInfo where
 import App.Types.Chapter
 import App.Types.Volume
 import Lib
+import qualified Text.Megaparsec as MP (try)
+import Text.Megaparsec.Char (string)
+import Text.Megaparsec.Char.Lexer (decimal)
 
 
 data ReleaseInfo
@@ -45,3 +48,27 @@ instance Ord ReleaseInfo where
             error $
                 "comparing overlapping range: "
                     <> (show a <> " vs " <> show b)
+
+
+mkReleaseInfo :: Text -> Try ReleaseInfo
+mkReleaseInfo = parseEither relInfo
+  where
+    relInfo = MP.try episode <|> MP.try book <|> episodes
+
+    episode =
+        string "第"
+            >> comicChapter
+            >>= (string "話" >>) . return . Episode
+
+    book =
+        string "第"
+            >> decimal
+            >>= (string "巻" >>) . return . Book . Volume
+
+    episodes = do
+        _ <- string "第"
+        beginChap <- comicChapter
+        _ <- string "-"
+        endChap <- comicChapter
+        _ <- string "話"
+        return $ Episodes (beginChap, endChap)

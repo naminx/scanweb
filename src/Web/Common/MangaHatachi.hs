@@ -4,12 +4,9 @@
 
 module Web.Common.MangaHatachi where
 
-import App.Exceptions
 import Import
 import qualified RIO.Text as T
-import qualified Text.Megaparsec as MP (try)
 import Text.Megaparsec.Char (string)
-import Text.Megaparsec.Char.Lexer (decimal)
 import Text.Taggy.Lens
 import Text.URI (mkPathPiece)
 import Text.URI.Lens (uriPath)
@@ -55,17 +52,12 @@ focusComics =
     relInfo :: ToLike Element (Try (Maybe ReleaseInfo))
     relInfo =
         to (preview $ taking 1 divChapterItem . anchor . contents)
-            . tryParseRelInfo
+            . tryParseRelInfo mkReleaseInfo
             . to (fmap Just)
 
     divChapterItem =
         allNamed (only "div")
             . attributed (hasClass "chapter-item")
-
-    tryParseRelInfo :: ToLike (Maybe Text) (Try ReleaseInfo)
-    tryParseRelInfo =
-        to (maybeToTry ChapterNoNotFound)
-            . to (>>= T.strip >>> mkReleaseInfo)
 
 
 focusLatestRelInfo :: Fold Node (Try URI)
@@ -87,15 +79,10 @@ focusRelInfos =
             . notAttributed (hasClass "c-new-tag")
 
     relInfo :: ToLike Element (Try ReleaseInfo)
-    relInfo = to (preview $ contents . to T.strip) . tryParseRelInfo
+    relInfo = to (preview $ contents . to T.strip) . tryParseRelInfo mkReleaseInfo
 
     url :: Fold Element (Try URI)
     url = attr "href" . tryParseURI
-
-    tryParseRelInfo :: ToLike (Maybe Text) (Try ReleaseInfo)
-    tryParseRelInfo =
-        to (maybeToTry ChapterNoNotFound)
-            . to (>>= mkReleaseInfo)
 
 
 focusRelInfo :: Fold Node (Try ReleaseInfo)
@@ -113,30 +100,6 @@ focusRelInfo =
     relInfo = attr "value" . tryParseChapter mkChapterNo . to (fmap Episode)
       where
         mkChapterNo = parseEither $ string "Chapter " >> comicChapter
-
-
-mkReleaseInfo :: Text -> Try ReleaseInfo
-mkReleaseInfo = parseEither relInfo
-  where
-    relInfo = MP.try episode <|> MP.try book <|> episodes
-
-    episode =
-        string "第"
-            >> comicChapter
-            >>= (string "話" >>) . return . Episode
-
-    book =
-        string "第"
-            >> decimal
-            >>= (string "巻" >>) . return . Book . Volume
-
-    episodes = do
-        _ <- string "第"
-        beginChap <- comicChapter
-        _ <- string "-"
-        endChap <- comicChapter
-        _ <- string "話"
-        return $ Episodes (beginChap, endChap)
 
 
 focusImages :: Fold Node (Try URI)

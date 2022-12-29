@@ -9,7 +9,8 @@
 // @match        https://j9jp.com/*
 // @match        https://klmanga.com/*
 // @match        https://klmanga.net/*
-// @match        https://manga9.co/chapters/*
+// @match        https://manga1001.in/chapters/*
+// @match        https://manga1001.su/chapters/*
 // @match        https://mangagun.com/*
 // @match        https://mangahatachi.com/*
 // @match        https://mangaraw.co/chapters/*
@@ -27,6 +28,7 @@
 // @connect      blazecloud.org
 // @connect      blazeclouds.co
 // @connect      byteblaze.me
+// @connect      cdnv2.shonenjumpmangas.com
 // @connect      cloudblaze.co
 // @connect      cloudblaze.org
 // @connect      comick.top
@@ -37,9 +39,9 @@
 // @connect      justaquickbite.com
 // @connect      klimv1.xyz
 // @connect      manga1000.top
-// @connect      manga9.co
 // @connect      mangahatachi.com
 // @connect      megabyteblaze.me
+// @connect      mg9.lectormanga.top
 // @connect      mm2r.net
 // @connect      rawdevart.com
 // @connect      welovekai.com
