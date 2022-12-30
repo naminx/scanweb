@@ -59,6 +59,15 @@ instance Exception LookupComicFailed where
         "Comic No." <> show (unComic comic) <> " not found in database"
 
 
+data NoComicsFound = NoComicsFound
+    deriving (Eq, Show)
+
+
+instance Exception NoComicsFound where
+    displayException NoComicsFound =
+        "Cannot scan comics, the code may need to update"
+
+
 data ChapterLinkNotFound = ChapterLinkNotFound
     deriving (Eq, Show)
 

@@ -6,6 +6,8 @@ module Web.Common.MangaHatachi where
 
 import Import
 import qualified RIO.Text as T
+import Replace.Megaparsec (anyTill)
+import Text.Megaparsec (eof)
 import Text.Megaparsec.Char (string)
 import Text.Taggy.Lens
 import Text.URI (mkPathPiece)
@@ -52,8 +54,13 @@ focusComics =
     relInfo :: ToLike Element (Try (Maybe ReleaseInfo))
     relInfo =
         to (preview $ taking 1 divChapterItem . anchor . contents)
-            . tryParseRelInfo mkReleaseInfo
+            . tryParseRelInfo (parseEither comicRelInfo)
             . to (fmap Just)
+
+    comicRelInfo = do
+        (_, r) <- anyTill comicReleaseInfo
+        _ <- anyTill eof
+        return r
 
     divChapterItem =
         allNamed (only "div")
@@ -79,7 +86,8 @@ focusRelInfos =
             . notAttributed (hasClass "c-new-tag")
 
     relInfo :: ToLike Element (Try ReleaseInfo)
-    relInfo = to (preview $ contents . to T.strip) . tryParseRelInfo mkReleaseInfo
+    relInfo =
+        to (preview $ contents . to T.strip) . tryParseRelInfo mkReleaseInfo
 
     url :: Fold Element (Try URI)
     url = attr "href" . tryParseURI

@@ -1,10 +1,16 @@
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE NoImplicitPrelude #-}
 
-module App.Types.ReleaseInfo where
+module App.Types.ReleaseInfo (
+    ReleaseInfo (..),
+    comicReleaseInfo,
+    mkReleaseInfo,
+) where
 
 import App.Types.Chapter
 import App.Types.Volume
 import Lib
+import Text.Megaparsec (ParsecT)
 import qualified Text.Megaparsec as MP (try)
 import Text.Megaparsec.Char (string)
 import Text.Megaparsec.Char.Lexer (decimal)
@@ -50,11 +56,20 @@ instance Ord ReleaseInfo where
                     <> (show a <> " vs " <> show b)
 
 
-mkReleaseInfo :: Text -> Try ReleaseInfo
-mkReleaseInfo = parseEither relInfo
-  where
-    relInfo = MP.try episode <|> MP.try book <|> episodes
+{--
+comicChapter :: Parser m Chapter
+comicChapter = do
+    chapter <- decimal
+    section <- optional $ single '.' >> decimal
+    return $ Chapter chapter section
+--}
 
+type Parser m a = ParsecT Void Text m a
+
+
+comicReleaseInfo :: Parser m ReleaseInfo
+comicReleaseInfo = MP.try episode <|> MP.try book <|> episodes
+  where
     episode =
         string "第"
             >> comicChapter
@@ -72,3 +87,7 @@ mkReleaseInfo = parseEither relInfo
         endChap <- comicChapter
         _ <- string "話"
         return $ Episodes (beginChap, endChap)
+
+
+mkReleaseInfo :: Text -> Try ReleaseInfo
+mkReleaseInfo = parseEither comicReleaseInfo

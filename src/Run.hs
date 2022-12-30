@@ -186,10 +186,12 @@ updateNewReleases = do
             waitTime <- getRandomWaitTime
             liftIO $ sleep waitTime
             markup <- runWd getMarkup
+            liftIO $ TL.writeFile "baka.htm" markup
             newReleases <-
                 scrapeComics markup
                     <&> filter isRight
                     <&> mapRelativeTo newReleaseUrl _1
+            when (null newReleases) $ throwM NoComicsFound
             sentinel <- currentWebInfo . _3 <%= id
             let hit = elemOf (folded . _Right . _1) sentinel newReleases
             if hit
