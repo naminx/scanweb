@@ -1,0 +1,184 @@
+cradle:
+  cabal:
+    - path: "src/Main.hs"
+      component: "scanweb:exe:scanweb"
+
+    - path: "src/App/Config.hs"
+      component: "scanweb:exe:scanweb"
+
+    - path: "src/App/Config/Linux.hs"
+      component: "scanweb:exe:scanweb"
+
+    - path: "src/App/Config/Windows.hs"
+      component: "scanweb:exe:scanweb"
+
+    - path: "src/App/Exceptions.hs"
+      component: "scanweb:exe:scanweb"
+
+    - path: "src/App/Tables.hs"
+      component: "scanweb:exe:scanweb"
+
+    - path: "src/App/Types.hs"
+      component: "scanweb:exe:scanweb"
+
+    - path: "src/App/Types/App.hs"
+      component: "scanweb:exe:scanweb"
+
+    - path: "src/App/Types/AppMode.hs"
+      component: "scanweb:exe:scanweb"
+
+    - path: "src/App/Types/Chapter.hs"
+      component: "scanweb:exe:scanweb"
+
+    - path: "src/App/Types/Comic.hs"
+      component: "scanweb:exe:scanweb"
+
+    - path: "src/App/Types/Domain.hs"
+      component: "scanweb:exe:scanweb"
+
+    - path: "src/App/Types/Misc.hs"
+      component: "scanweb:exe:scanweb"
+
+    - path: "src/App/Types/Options.hs"
+      component: "scanweb:exe:scanweb"
+
+    - path: "src/App/Types/Page.hs"
+      component: "scanweb:exe:scanweb"
+
+    - path: "src/App/Types/Path.hs"
+      component: "scanweb:exe:scanweb"
+
+    - path: "src/App/Types/Persist.hs"
+      component: "scanweb:exe:scanweb"
+
+    - path: "src/App/Types/ReleaseInfo.hs"
+      component: "scanweb:exe:scanweb"
+
+    - path: "src/App/Types/RText.hs"
+      component: "scanweb:exe:scanweb"
+
+    - path: "src/App/Types/Title.hs"
+      component: "scanweb:exe:scanweb"
+
+    - path: "src/App/Types/URI.hs"
+      component: "scanweb:exe:scanweb"
+
+    - path: "src/App/Types/URL.hs"
+      component: "scanweb:exe:scanweb"
+
+    - path: "src/App/Types/Volume.hs"
+      component: "scanweb:exe:scanweb"
+
+    - path: "src/App/Types/Web.hs"
+      component: "scanweb:exe:scanweb"
+
+    - path: "src/Data/WOE.hs"
+      component: "scanweb:exe:scanweb"
+
+    - path: "src/Import.hs"
+      component: "scanweb:exe:scanweb"
+
+    - path: "src/Init.hs"
+      component: "scanweb:exe:scanweb"
+
+    - path: "src/Lib.hs"
+      component: "scanweb:exe:scanweb"
+
+    - path: "src/Lib/Console.hs"
+      component: "scanweb:exe:scanweb"
+
+    - path: "src/Lib/Esqueleto.hs"
+      component: "scanweb:exe:scanweb"
+
+    - path: "src/Lib/Extra.hs"
+      component: "scanweb:exe:scanweb"
+
+    - path: "src/Lib/Lens.hs"
+      component: "scanweb:exe:scanweb"
+
+    - path: "src/Lib/Megaparsec.hs"
+      component: "scanweb:exe:scanweb"
+
+    - path: "src/Lib/MIME.hs"
+      component: "scanweb:exe:scanweb"
+
+    - path: "src/Lib/RIO.hs"
+      component: "scanweb:exe:scanweb"
+
+    - path: "src/Lib/Taggy.hs"
+      component: "scanweb:exe:scanweb"
+
+    - path: "src/Lib/URI.hs"
+      component: "scanweb:exe:scanweb"
+
+    - path: "src/Lib/WebDriver.hs"
+      component: "scanweb:exe:scanweb"
+
+    - path: "src/Options.hs"
+      component: "scanweb:exe:scanweb"
+
+    - path: "src/Progs.hs"
+      component: "scanweb:exe:scanweb"
+
+    - path: "src/Pure.hs"
+      component: "scanweb:exe:scanweb"
+
+    - path: "src/Run.hs"
+      component: "scanweb:exe:scanweb"
+
+    - path: "src/Web.hs"
+      component: "scanweb:exe:scanweb"
+
+    - path: "src/Web/Common.hs"
+      component: "scanweb:exe:scanweb"
+
+    - path: "src/Web/Common/Manga1001.hs"
+      component: "scanweb:exe:scanweb"
+
+    - path: "src/Web/Common/MangaHatachi.hs"
+      component: "scanweb:exe:scanweb"
+
+    - path: "src/Web/Common/WeLoveManga.hs"
+      component: "scanweb:exe:scanweb"
+
+    - path: "src/Web/HachiManga/Com.hs"
+      component: "scanweb:exe:scanweb"
+
+    - path: "src/Web/J8Jp/Com.hs"
+      component: "scanweb:exe:scanweb"
+
+    - path: "src/Web/KlManga/Net.hs"
+      component: "scanweb:exe:scanweb"
+
+    - path: "src/Web/Manga1001/In.hs"
+      component: "scanweb:exe:scanweb"
+
+    - path: "src/Web/Manga1001/Su.hs"
+      component: "scanweb:exe:scanweb"
+
+    - path: "src/Web/MangaGun/Com.hs"
+      component: "scanweb:exe:scanweb"
+
+    - path: "src/Web/MangaRaw/Io.hs"
+      component: "scanweb:exe:scanweb"
+
+    - path: "src/Web/MangaRaw/So.hs"
+      component: "scanweb:exe:scanweb"
+
+    - path: "src/Web/RawDevArt/Com.hs"
+      component: "scanweb:exe:scanweb"
+
+    - path: "src/Web/SyoSetu/Top.hs"
+      component: "scanweb:exe:scanweb"
+
+    - path: "src/Web/WeLoMa/Art.hs"
+      component: "scanweb:exe:scanweb"
+
+    - path: "src/Web/WeLoveManga/One.hs"
+      component: "scanweb:exe:scanweb"
+
+    - path: "src/WebDriver.hs"
+      component: "scanweb:exe:scanweb"
+
+    - path: "src/Paths_scanweb.hs"
+      component: "scanweb:exe:scanweb"

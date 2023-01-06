@@ -13,6 +13,7 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE NoImplicitPrelude #-}
 
 module Lib.Taggy (
@@ -22,18 +23,19 @@ module Lib.Taggy (
 ) where
 
 import Control.Lens
+import Data.Type.Equality (type (~))
 import RIO
 import qualified RIO.List as L (intersect)
 import qualified RIO.Text as T (unwords, words)
 import Text.Taggy.Lens (Element, attrs)
 
 
-hasClass ::
-    (Applicative f, IxValue m ~ Text, Index m ~ Text, Ixed m) =>
-    Text ->
-    (() -> f ()) ->
-    m ->
-    f m
+hasClass
+    :: (Applicative f, IxValue m ~ Text, Index m ~ Text, Ixed m)
+    => Text
+    -> (() -> f ())
+    -> m
+    -> f m
 hasClass c =
     ix "class" . contains_ c
   where
@@ -41,12 +43,12 @@ hasClass c =
     contains_ c' = prism' (\() -> c') $ guard . (elem c' . T.words)
 
 
-hasClasses ::
-    (Applicative f, IxValue m ~ Text, Index m ~ Text, Ixed m) =>
-    [Text] ->
-    (() -> f ()) ->
-    m ->
-    f m
+hasClasses
+    :: (Applicative f, IxValue m ~ Text, Index m ~ Text, Ixed m)
+    => [Text]
+    -> (() -> f ())
+    -> m
+    -> f m
 hasClasses cs =
     ix "class" . contains_ cs
   where

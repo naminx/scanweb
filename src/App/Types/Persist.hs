@@ -10,8 +10,10 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE NoImplicitPrelude #-}
+{-# OPTIONS_GHC -Wmissed-extra-shared-lib #-}
 {-# OPTIONS_GHC -Wno-name-shadowing #-}
 
 module App.Types.Persist where

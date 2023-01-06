@@ -5,32 +5,61 @@
     haskell-flake.url = "github:srid/haskell-flake";
   };
   outputs = inputs@{ self, nixpkgs, flake-parts, ... }:
-    flake-parts.lib.mkFlake { inherit self; } {
+    flake-parts.lib.mkFlake { inherit inputs; } {
       systems = nixpkgs.lib.systems.flakeExposed;
       imports = [ inputs.haskell-flake.flakeModule ];
-      perSystem = { self', pkgs, ... }: {
+      perSystem = { config, self', inputs', pkgs, system, ... }: {
+        _module.args.pkgs = import nixpkgs {
+          inherit system;
+          config.allowUnfree = true;
+        };
         haskellProjects.default = {
-          haskellPackages = pkgs.haskell.packages.ghc924;
+          haskellPackages = pkgs.haskell.packages.ghc944;
           # packages = { 
-            # You can add more than one local package here.
-            # my-package.root = ./.;  # Assumes ./my-package.cabal
+          # You can add more than one local package here.
+          # my-package.root = ./.;  # Assumes ./my-package.cabal
           # };
           # buildTools = hp: { fourmolu = hp.fourmolu; ghcid = null; };
           buildTools = hp: {
             inherit (pkgs)
               stack
-              lambdabot;
-            #   chromedriver
-            #   chromium;
+              lambdabot
+              chromedriver
+              google-chrome
+              zlib;
             inherit (hp)
+              implicit-hie_0_1_4_0
               fourmolu;
           };
           # overrides = self: super: { };
+          overrides = self: super: rec {
+            ghcid = pkgs.haskell.lib.dontCheck super.ghcid;
+            hlint = pkgs.haskell.lib.dontCheck (
+              self.callHackageDirect
+                {
+                  pkg = "hlint";
+                  ver = "3.5";
+                  # sha256 = pkgs.lib.fakeSha256;
+                  sha256 = "qQNUlQQnahUGEO92Lm0RwjTGBGr2Yaw0KRuFRMoc5No=";
+                }
+                { }
+            );
+            fourmolu = pkgs.haskell.lib.dontCheck (
+              self.callHackageDirect
+                {
+                  pkg = "fourmolu";
+                  ver = "0.10.1.0";
+                  # sha256 = pkgs.lib.fakeSha256;
+                  sha256 = "nmMz6kgI9cRljNSH9lbuozKJ7nd5pM4EKfUs0+x5N4U=";
+                }
+                { }
+            );
+          };
           # hlintCheck.enable = true;
           # hlsCheck.enable = true;
         };
         # haskell-flake doesn't set the default package, but you can do it here.
-        packages.default = self'.packages.scanweb;
+        # packages.default = self'.packages.scanweb;
       };
     };
 }
