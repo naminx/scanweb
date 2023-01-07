@@ -186,7 +186,6 @@ updateNewReleases = do
             waitTime <- getRandomWaitTime
             liftIO $ sleep waitTime
             markup <- runWd getMarkup
-            liftIO $ TL.writeFile "baka.htm" markup
             newReleases <-
                 scrapeComics markup
                     <&> filter isRight

@@ -20,7 +20,7 @@ newReleaseUrl (Page n)
     -- This trailing slash is important to flag an ABSOLUTE path.
     | n == 1 = return [uri|/|]
     | otherwise =
-        return $ [uri|/page|] & uriPath %~ (<> pageNo)
+        return $ [uri|/page/|] & uriPath %~ (<> pageNo)
   where
     pageNo = mkPathPiece $ T.pack $ show n
 
