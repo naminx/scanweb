@@ -14,7 +14,7 @@ import App.Tables
 import App.Types
 import Control.Lens hiding (elements)
 import Data.Aeson (ToJSON (..), Value (..))
-import Data.Aeson.Lens (_Bool, _String)
+import Data.Aeson.Lens (key, _Array, _Bool, _String)
 import Data.Attoparsec.ByteString (parseOnly)
 import qualified Data.ByteString as BS (writeFile)
 import Data.Monoid (First)
@@ -49,6 +49,7 @@ import Lib hiding (domain)
 import qualified Lib as URI
 import Network.HTTP.Client (HttpException)
 import RIO.Partial (succ)
+import Web.Common (tryParseChapter, tryParseURI)
 
 -- import Network.Wreq (defaults, header, responseBody, responseHeader)
 -- import Network.Wreq.Session (getWith)
@@ -75,6 +76,7 @@ import System.Console.ANSI (Color (..))
 import System.Directory (createDirectory)
 import System.Random (randomRIO)
 import System.Time.Extra (Seconds, sleep)
+import Text.Megaparsec.Char.Lexer (decimal)
 import Text.Megaparsec.Error (ParseErrorBundle)
 import Text.Pretty.Simple (pPrint)
 import Text.RawString.QQ (r)
@@ -82,7 +84,6 @@ import Text.URI (URI, emptyURI, relativeTo, render, renderBs, renderStr, unRText
 import Text.URI.Lens (authHost, uriAuthority, uriFragment, uriPath, uriQuery, uriScheme)
 import Web
 import Web.Api.WebDriver hiding (Page)
-import Prelude (putStrLn)
 
 
 set_ :: PersistEntity val => SqlExpr (Entity val) -> [SqlExpr (Entity val) -> SqlExpr Update] -> SqlQuery ()
@@ -104,8 +105,8 @@ mkWebTable = do
     webTab <- queryWebTable sqlBackend
     webTable .= webTab
     domainTable .= Map.fromList (convertEntry <$> Map.toList webTab)
-  where
-    convertEntry (h, (d, _, _)) = (d, h)
+    where
+        convertEntry (h, (d, _, _, _, _, _, _)) = (d, h)
 
 
 mkComicTable :: forall s env. (HasStateRef s env, HasApp s) => RIO env ()
@@ -160,9 +161,9 @@ runWdSession wdSess action = do
     case result of
         Right a -> return a
         Left e -> throwM e
-  where
-    runAction = execWebDriverT $ chromeConfig & initialSession ?~ wdSess
-    initialSession = initialState . userState . sessionId
+    where
+        runAction = execWebDriverT $ chromeConfig & initialSession ?~ wdSess
+        initialSession = initialState . userState . sessionId
 
 
 updateNewReleases
@@ -185,22 +186,76 @@ updateNewReleases = do
             waitForLoaded newReleaseUrl
             waitTime <- getRandomWaitTime
             liftIO $ sleep waitTime
+            {--
             markup <- runWd getMarkup
             newReleases <-
                 scrapeComics markup
                     <&> filter isRight
                     <&> mapRelativeTo newReleaseUrl _1
-            when (null newReleases) $ throwM NoComicsFound
+            --}
+            scrapeComicsScript <- currentWebInfo . _4 <%= id
+            newReleases <-
+                runWd (executeScript scrapeComicsScript [])
+                    <&> (view _Array >>> toList >>> fmap (liftA2 (,) . js2URI <*> js2MaybeRelInfo))
+            when (null newReleases) $ throwM ComicLinksNotFound
             sentinel <- currentWebInfo . _3 <%= id
             let hit = elemOf (folded . _Right . _1) sentinel newReleases
             if hit
-                then traverse tryClickAndDownloadComic $ takeWhile (urlNotMatch sentinel) newReleases
+                then
+                    traverse tryClickAndDownloadComic $
+                        takeWhile (urlNotMatch sentinel) newReleases
                 else do
                     result <- traverse tryClickAndDownloadComic newReleases
                     currentPage %= succ
                     (result <>) <$> updateNewReleases
-  where
-    urlNotMatch = (preview (_Right . _1) >>>) . (/=) . Just
+    where
+        urlNotMatch = (preview (_Right . _1) >>>) . (/=) . Just
+
+
+js2URI :: Value -> Try URI
+js2URI = preview (key "url" . _String) >>> view tryParseURI
+
+
+js2MaybeURI :: Value -> Try URI
+js2MaybeURI x = x ^? _String ^. tryParseURI
+
+
+js2MaybeRelInfo :: Value -> Try (Maybe ReleaseInfo)
+js2MaybeRelInfo = sequence . liftA2 (<>) tryBook tryEpisode
+    where
+        tryBook =
+            preview $
+                key "volume"
+                    . _String
+                    . to (parseEither decimal)
+                    . to (fmap $ Book . Volume)
+        tryEpisode =
+            preview $
+                key "chapter"
+                    . _String
+                    . to Just
+                    . tryParseChapter mkChapter
+                    . to (fmap Episode)
+
+
+js2RelInfo :: Value -> Try ReleaseInfo
+js2RelInfo =
+    fromMaybe (Left $ toException ChapterLinksNotFound)
+        . liftA2 (<>) tryBook tryEpisode
+    where
+        tryBook =
+            preview $
+                key "volume"
+                    . _String
+                    . to (parseEither decimal)
+                    . to (fmap $ Book . Volume)
+        tryEpisode =
+            preview $
+                key "chapter"
+                    . _String
+                    . to Just
+                    . tryParseChapter mkChapter
+                    . to (fmap Episode)
 
 
 mapRelativeTo :: forall s. URI -> Lens' s URI -> [Try s] -> [Try s]
@@ -217,15 +272,6 @@ applyRelativeTo base focus (Right value) = case (value ^. focus) `relativeTo` ba
     Just url -> Right $ value & focus .~ url
     Nothing -> Left $ toException $ InvalidBaseUrl $ renderStr base
 
-
-{--
-getMarkup :: WebDriver wd => wd TL.Text
-getMarkup = do
-    markup <- executeJS [] "return document.getElementsByTagName('html')[0].innerHTML;"
-    if TL.take 6 markup == "<html>"
-        then return markup
-        else return $ "<html>" <> markup <> "</html>"
---}
 
 getMarkup :: WebDriverT IO TL.Text
 getMarkup = do
@@ -344,19 +390,32 @@ openAndScanComic = do
     comicUrl <- currentComicUrl <%= id
     runWd $ navigateToStealth $ render comicUrl
     waitForLoaded comicUrl
-    markup <- runWd getMarkup
+    -- markup <- runWd getMarkup
     maybeRelInfo <- newReleaseInfo <%= id
-    latestChapUrl <- scrapeLatestRelInfo markup
+    scrapeLatestScript <- currentWebInfo . _5 <%= id
+    -- latestChapUrl <- scrapeLatestRelInfo markup
+    latestChapUrl <-
+        runWd (executeScript scrapeLatestScript [])
+            <&> preview (_String . to Just . tryParseURI)
     let newRelease =
             zipWith
                 (liftA2 (,))
                 (maybeRelInfo ^.. _Just . to Right)
                 (latestChapUrl ^.. _Just)
+    scrapeChaptersScript <- currentWebInfo . _6 <%= id
+    newReleases <-
+        runWd (executeScript scrapeChaptersScript [])
+            <&> (view _Array >>> toList >>> fmap (liftA2 (,) . js2RelInfo <*> js2URI))
+            <&> (<> newRelease)
+            <&> uniqRelease
+            <&> filterBy (_Right . _1) (`newerThan` (volumeLast, chapterLast))
+    {--
     newReleases <- -- :: RIO env [Try (ReleaseInfo, URI)]
         scrapeRelInfos markup
             <&> (<> newRelease)
             <&> uniqRelease
             <&> filterBy (_Right . _1) (`newerThan` (volumeLast, chapterLast))
+    --}
     let chapters =
             newReleases
                 & iover (traversed . _Right) (\n (c, u) -> (c, u, u, length newReleases - n))
@@ -392,7 +451,7 @@ openAndDownloadRelease relInfo = do
     comicUrl <- currentComicUrl <%= id
     runWd $ navigateToStealth $ render comicUrl
     waitForLoaded comicUrl
-    markup <- runWd getMarkup
+    -- markup <- runWd getMarkup
     {--
     latestChapUrl <- scrapeLatestRelInfo markup
     let newRelease =
@@ -401,11 +460,19 @@ openAndDownloadRelease relInfo = do
                 [Right relInfo]
                 (latestChapUrl ^.. _Just)
     --}
+    scrapeChaptersScript <- currentWebInfo . _6 <%= id
+    targetChapter <-
+        runWd (executeScript scrapeChaptersScript [])
+            <&> (view _Array >>> toList >>> fmap (liftA2 (,) . js2RelInfo <*> js2URI))
+            <&> uniqRelease
+            <&> equalsTo relInfo
+    {--
     targetChapter <-
         scrapeRelInfos markup
             -- <&> (<> newRelease)
             <&> uniqRelease
             <&> equalsTo relInfo
+    --}
     let chapters =
             targetChapter
                 & iover (traversed . _Right) (\n (c, u) -> (c, u, u, length targetChapter - n))
@@ -416,8 +483,8 @@ openAndDownloadRelease relInfo = do
     if lastOf (takingWhile isRight folded . _Right) result == Just relInfo
         then return ()
         else throwM SomeChaptersNotDownloaded
-  where
-    equalsTo chap = toListOf (folded . filtered (preview (_Right . _1) >>> (== Just chap)))
+    where
+        equalsTo chap = toListOf (folded . filtered (preview (_Right . _1) >>> (== Just chap)))
 
 
 {--
@@ -448,20 +515,34 @@ clickAndScanComic = do
     newWin <- execNewWin (clickAnchorTargetBlank comicUrl) []
     runWd $ switchToWindow newWin
     waitForLoaded comicUrl
-    markup <- runWd getMarkup
+    -- markup <- runWd getMarkup
     maybeRelInfo <- newReleaseInfo <%= id
-    latestChapUrl <- scrapeLatestRelInfo markup
+    scrapeLatestScript <- currentWebInfo . _5 <%= id
+    -- latestChapUrl <- scrapeLatestRelInfo markup
+    latestChapUrl <-
+        runWd (executeScript scrapeLatestScript [])
+            <&> preview (_String . to Just . tryParseURI)
     let newRelease =
             zipWith
                 (liftA2 (,))
                 (maybeRelInfo ^.. _Just . to Right)
                 (latestChapUrl ^.. _Just)
-    newReleases <-
+    scrapeChaptersScript <- currentWebInfo . _6 <%= id
+    {--
+    releases <-
         scrapeRelInfos markup
             <&> (<> newRelease)
             <&> uniqRelease
-            <&> filterBy (_Right . _1) (`newerThan` (volumeLast, chapterLast))
-    let chapters =
+    --}
+    releases <-
+        runWd (executeScript scrapeChaptersScript [])
+            <&> (view _Array >>> toList >>> fmap (liftA2 (,) . js2RelInfo <*> js2URI))
+            <&> (<> newRelease)
+            <&> uniqRelease
+    when (null releases) $ throwM ChapterLinksNotFound
+    let newReleases =
+            releases & filterBy (_Right . _1) (`newerThan` (volumeLast, chapterLast))
+        chapters =
             newReleases
                 & iover (traversed . _Right) (\n (c, u) -> (c, u, u, length newReleases - n))
                 <&> applyRelativeTo comicUrl _2
@@ -534,52 +615,56 @@ downloadRelease (relInfo, absUrl, _relUrl, _count) = bracketDownloadRelease $ do
     when (any (has _Left) result) $
         throwM SomeImagesNotDownloaded
     return relInfo
-  where
-    bracketDownloadRelease = bracket_ printDownloadingChapter printNewLine
+    where
+        bracketDownloadRelease = bracket_ printDownloadingChapter printNewLine
 
-    printDownloadingChapter = do
-        logSticky
-            =<< stickyLine
-                <.= ( vivid Black <> "downloading " <> case relInfo of
-                        Book _ -> "volume "
-                        _ -> "chapter "
-                    )
-                    <> (vivid Yellow <> T.pack (showReleaseInfo relInfo))
+        printDownloadingChapter = do
+            logSticky
+                =<< stickyLine
+                    <.= ( vivid Black <> "downloading " <> case relInfo of
+                            Book _ -> "volume "
+                            _ -> "chapter "
+                        )
+                        <> (vivid Yellow <> T.pack (showReleaseInfo relInfo))
 
-    printNewLine = do
-        logStickyDone =<< stickyLine <%= id
+        printNewLine = do
+            logStickyDone =<< stickyLine <%= id
 
-    bracketDownloadImages =
-        bracket_
-            (logSticky =<< stickyLine <<>= vivid Black <> " [")
-            (logSticky =<< stickyLine <<>= vivid Black <> "]")
+        bracketDownloadImages =
+            bracket_
+                (logSticky =<< stickyLine <<>= vivid Black <> " [")
+                (logSticky =<< stickyLine <<>= vivid Black <> "]")
 
-    printExceptionEx someException = case fromException someException of
-        Just e -> do
-            runSimpleApp $
-                logWarn $
-                    display $
-                        vivid Yellow
-                            <> T.pack
-                                ( displayException
-                                    (e :: InvalidImageSubtype)
-                                )
-        _ -> printException someException
+        printExceptionEx someException = case fromException someException of
+            Just e -> do
+                runSimpleApp $
+                    logWarn $
+                        display $
+                            vivid Yellow
+                                <> T.pack
+                                    ( displayException
+                                        (e :: InvalidImageSubtype)
+                                    )
+            _ -> printException someException
 
-    waitForImagesToLoad = do
-        markup <- runWd getMarkup
-        images <- scrapeImages markup <&> mapRelativeTo absUrl id
-        if has
-            ( folded
-                . _Right
-                . to (not . null . T.indices "image/gif" . render)
-                . filtered (== True)
-            )
-            images
-            then do
-                liftIO $ sleep 1
-                waitForImagesToLoad
-            else return images
+        waitForImagesToLoad = do
+            -- markup <- runWd getMarkup
+            -- images <- scrapeImages markup <&> mapRelativeTo absUrl id
+            scrapeImagesScript <- currentWebInfo . _7 <%= id
+            images <-
+                runWd (executeScript scrapeImagesScript [])
+                    <&> (view _Array >>> toList >>> fmap (preview _String >>> view tryParseURI))
+            if has
+                ( folded
+                    . _Right
+                    . to (not . null . T.indices "image/gif" . render)
+                    . filtered id
+                )
+                images
+                then do
+                    liftIO $ sleep 1
+                    waitForImagesToLoad
+                else return images
 
 
 releaseFolder :: ReleaseInfo -> Path Rel Dir
@@ -640,20 +725,20 @@ tryDownloadImage (tryUrl, imgFileName) = case tryUrl of
                         _ -> case fromException someException of
                             Just e -> returnLeft Yellow $ toException (e :: InvalidImageSubtype)
                             _ -> throwM someException
-  where
-    putTick color = do
-        logSticky =<< stickyLine <<>= vivid color <> T.pack tick
+    where
+        putTick color = do
+            logSticky =<< stickyLine <<>= vivid color <> T.pack tick
 
-    tick = case reverse $ toFilePath imgFileName of
-        oneth : tenth : _ ->
-            case oneth of
-                '0' -> tenth : "0"
-                '5' -> "|"
-                _ -> "·"
-        _ -> "!"
+        tick = case reverse $ toFilePath imgFileName of
+            oneth : tenth : _ ->
+                case oneth of
+                    '0' -> tenth : "0"
+                    '5' -> "|"
+                    _ -> "·"
+            _ -> "!"
 
-    returnLeft color someException =
-        putTick color >> return (Left someException)
+        returnLeft color someException =
+            putTick color >> return (Left someException)
 
 
 getRandomWaitTime :: forall env s. (HasStateRef s env, HasApp s) => RIO env Seconds
@@ -691,16 +776,16 @@ waitForLoaded :: forall env s. (HasStateRef s env, HasApp s) => URI -> RIO env (
 waitForLoaded _ = do
     keyElem <- keyElement
     runWd $ waitUntil (pred keyElem) $ round $ minWaitTime * 1000
-  where
-    pred keyElem = "document.querySelectorAll(\"" <> keyElem <> "\").length > 0"
+    where
+        pred keyElem = "document.querySelectorAll(\"" <> keyElem <> "\").length > 0"
 
 
 waitUntil :: Text -> Int -> WebDriverT IO ()
 waitUntil func msec =
     void $ executeScript jsWaitUntil [toJSON func, toJSON msec]
-  where
-    jsWaitUntil =
-        [r|
+    where
+        jsWaitUntil =
+            [r|
     return await new Promise((resolve, reject) => {
       const timeWas = new Date();
       const pred = new Function("return (" + arguments[0] + ");");
@@ -786,9 +871,9 @@ selectorAnchor url =
         <> (",a[href='" <> render url <> "/']")
         <> (",a[href='" <> render (url & removeHttps & removeDomain True) <> "/']")
         <> (",a[href='" <> render (url & removeHttps & removeDomain False) <> "/']")
-  where
-    removeHttps = uriScheme .~ Nothing
-    removeDomain isPathAbsolute = uriAuthority .~ Left isPathAbsolute
+    where
+        removeHttps = uriScheme .~ Nothing
+        removeDomain isPathAbsolute = uriAuthority .~ Left isPathAbsolute
 
 
 clickAnchorTargetBlank :: URI -> Text
@@ -864,9 +949,9 @@ testChapter web = do
     setWebTo web
     getNewReleaseUrl >>= \url -> runWd (navigateToStealth $ render url) *> waitForLoaded url
     runWd getMarkup >>= scrapeComics >>= (take 1 >>> traverse_ doTest)
-  where
-    doTest (Left _) = return ()
-    doTest (Right (url, _)) = do
-        runWd $ navigateToStealth $ render url
-        waitForLoaded url
-        runWd getMarkup >>= scrapeRelInfos >>= pPrint . fmap (fmap $ fmap URL)
+    where
+        doTest (Left _) = return ()
+        doTest (Right (url, _)) = do
+            runWd $ navigateToStealth $ render url
+            waitForLoaded url
+            runWd getMarkup >>= scrapeRelInfos >>= pPrint . fmap (fmap $ fmap URL)

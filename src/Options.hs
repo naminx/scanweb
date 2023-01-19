@@ -17,7 +17,7 @@ import qualified Text.Megaparsec as MP (try)
 import Text.Megaparsec.Char.Lexer (decimal)
 
 
----
+--
 timestamp :: IsString s => s
 timestamp = __TIMESTAMP__
 
@@ -144,21 +144,21 @@ mkTupleWebComicRelInfo = parseEither $ do
 
 releaseInfo :: TextParser ReleaseInfo
 releaseInfo = MP.try episodes <|> MP.try episode <|> book
-  where
-    book = do
-        _ <- single ':'
-        Book . Volume <$> decimal
-    episode = do
-        _ <- single ':'
-        _ <- single ':'
-        Episode <$> comicChapter
-    episodes = do
-        _ <- single ':'
-        _ <- single ':'
-        chapterBegin <- comicChapter
-        _ <- single '-'
-        chapterEnd <- comicChapter
-        return $ Episodes (chapterBegin, chapterEnd)
+    where
+        book = do
+            _ <- single ':'
+            Book . Volume <$> decimal
+        episode = do
+            _ <- single ':'
+            _ <- single ':'
+            Episode <$> comicChapter
+        episodes = do
+            _ <- single ':'
+            _ <- single ':'
+            chapterBegin <- comicChapter
+            _ <- single '-'
+            chapterEnd <- comicChapter
+            return $ Episodes (chapterBegin, chapterEnd)
 
 
 modeListWebs :: Parser AppMode

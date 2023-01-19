@@ -15,14 +15,12 @@
         };
         haskellProjects.default = {
           haskellPackages = pkgs.haskell.packages.ghc944;
-          # packages = { 
-          # You can add more than one local package here.
-          # my-package.root = ./.;  # Assumes ./my-package.cabal
-          # };
-          # buildTools = hp: { fourmolu = hp.fourmolu; ghcid = null; };
+        # packages = {
+        #   You can add more than one local package here.
+        #   my-package.root = ./.;  # Assumes ./my-package.cabal
+        # };
           buildTools = hp: {
             inherit (pkgs)
-              stack
               lambdabot
               chromedriver
               google-chrome
@@ -41,16 +39,6 @@
                   ver = "3.5";
                   # sha256 = pkgs.lib.fakeSha256;
                   sha256 = "qQNUlQQnahUGEO92Lm0RwjTGBGr2Yaw0KRuFRMoc5No=";
-                }
-                { }
-            );
-            fourmolu = pkgs.haskell.lib.dontCheck (
-              self.callHackageDirect
-                {
-                  pkg = "fourmolu";
-                  ver = "0.10.1.0";
-                  # sha256 = pkgs.lib.fakeSha256;
-                  sha256 = "nmMz6kgI9cRljNSH9lbuozKJ7nd5pM4EKfUs0+x5N4U=";
                 }
                 { }
             );

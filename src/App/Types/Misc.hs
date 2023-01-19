@@ -18,7 +18,7 @@ import Text.URI (UserInfo, emptyURI)
 import Text.URI.QQ (host)
 
 
-type WebInfo = (Domain, Maybe UserInfo, URI)
+type WebInfo = (Domain, Maybe UserInfo, URI, Text, Text, Text, Text)
 type WebTable = Map Web WebInfo
 type DomainTable = Map Domain Web
 type ComicInfo = (Title, Path Rel Dir, Volume, Chapter)
@@ -27,7 +27,7 @@ type UrlTable = Map URI (Web, Comic)
 
 
 emptyWebInfo :: WebInfo
-emptyWebInfo = ([host||], Nothing, emptyURI)
+emptyWebInfo = ([host||], Nothing, emptyURI, "", "", "", "")
 
 
 emptyComicInfo :: ComicInfo

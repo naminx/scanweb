@@ -59,22 +59,22 @@ instance Exception LookupComicFailed where
         "Comic No." <> show (unComic comic) <> " not found in database"
 
 
-data NoComicsFound = NoComicsFound
+data ComicLinksNotFound = ComicLinksNotFound
     deriving (Eq, Show)
 
 
-instance Exception NoComicsFound where
-    displayException NoComicsFound =
-        "Cannot scan comics, the code may need to update"
+instance Exception ComicLinksNotFound where
+    displayException ComicLinksNotFound =
+        "Parse failed, comic links not found"
 
 
-data ChapterLinkNotFound = ChapterLinkNotFound
+data ChapterLinksNotFound = ChapterLinksNotFound
     deriving (Eq, Show)
 
 
-instance Exception ChapterLinkNotFound where
-    displayException ChapterLinkNotFound =
-        "Parse failed, chapter link not found"
+instance Exception ChapterLinksNotFound where
+    displayException ChapterLinksNotFound =
+        "Parse failed, chapter links not found"
 
 
 data ChapterNoNotFound = ChapterNoNotFound

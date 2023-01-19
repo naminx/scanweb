@@ -21,7 +21,7 @@ tryParseRelInfo mkRelInfo =
 
 
 tryParseURI :: ToLike (Maybe Text) (Try URI)
-tryParseURI = to $ maybeToTry ChapterLinkNotFound >>> (>>= mkURI)
+tryParseURI = to $ maybeToTry ChapterLinksNotFound >>> (>>= mkURI)
 
 
 noLatestRelInfo :: Fold Node (Try URI)

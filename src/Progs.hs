@@ -28,11 +28,11 @@ _dummy =
         (pPrint (0 :: Int) :: IO ())
 
 
-progScanWebs ::
-    forall env s.
-    (HasStateRef s env, HasApp s, HasLogFunc s, HasProcessContext s) =>
-    [Web] ->
-    RIO env ()
+progScanWebs
+    :: forall env s
+     . (HasStateRef s env, HasApp s, HasLogFunc s, HasProcessContext s)
+    => [Web]
+    -> RIO env ()
 progScanWebs =
     traverse_ $
         [ scanWeb
@@ -42,11 +42,11 @@ progScanWebs =
             ^?! ix 0
 
 
-progUpdateComic ::
-    forall env s.
-    (HasStateRef s env, HasApp s, HasLogFunc s, HasProcessContext s) =>
-    (Web, Comic, Maybe ReleaseInfo) ->
-    RIO env ()
+progUpdateComic
+    :: forall env s
+     . (HasStateRef s env, HasApp s, HasLogFunc s, HasProcessContext s)
+    => (Web, Comic, Maybe ReleaseInfo)
+    -> RIO env ()
 progUpdateComic (web, comic, relInfo) = do
     setWebTo web
     setComicTo comic
@@ -61,11 +61,11 @@ progUpdateComic (web, comic, relInfo) = do
             updateComicTable comic chapter
 
 
-progDownloadRelease ::
-    forall env s.
-    (HasStateRef s env, HasApp s, HasLogFunc s, HasProcessContext s) =>
-    (Web, Comic, ReleaseInfo) ->
-    RIO env ()
+progDownloadRelease
+    :: forall env s
+     . (HasStateRef s env, HasApp s, HasLogFunc s, HasProcessContext s)
+    => (Web, Comic, ReleaseInfo)
+    -> RIO env ()
 progDownloadRelease (web, comic, relInfo) = do
     setWebTo web
     setComicTo comic
@@ -83,9 +83,10 @@ progListWebs = do
         printWebs =
             traverse_ printWeb . sortWith (\(web, _) -> fromEnum web) . Map.toList
 
-        printWeb (web, (domain_, _, _)) =
+        printWeb (web, (domain_, _, _, _, _, _, _)) =
             runSimpleApp . logInfo . display $
-                vivid Yellow <> TL.toStrict (format (lpadded 2 ' ' int) $ fromEnum web)
+                vivid Yellow
+                    <> TL.toStrict (format (lpadded 2 ' ' int) $ fromEnum web)
                     <> (resetSGR <> ") ")
                     <> (vivid Green <> unRText domain_)
                     <> resetSGR
@@ -101,10 +102,13 @@ progListComics = do
 
         printComic (Comic {unComic = comic}, (Title {unTitle = title}, _, Volume vol, chap)) =
             runSimpleApp . logInfo . display $
-                vivid Yellow <> TL.toStrict (format (lpadded 3 ' ' int) comic)
+                vivid Yellow
+                    <> TL.toStrict (format (lpadded 3 ' ' int) comic)
                     <> (resetSGR <> ") ")
                     <> (vivid Green <> title)
-                    <> ( vivid Black <> " (Vol." <> T.pack (show vol)
+                    <> ( vivid Black
+                            <> " (Vol."
+                            <> T.pack (show vol)
                             <> (", Ch." <> T.pack (show chap) <> ")")
                        )
                     <> resetSGR
