@@ -40,10 +40,12 @@ share
     username (RText 'Username) Maybe
     password (RText 'Password) Maybe
     sentinel URI
-    comics Text
-    latest Text
-    chapters Text
-    images Text
+    genUrl Text
+    isLoaded Text
+    scrapeComics Text
+    scrapeLatest Text
+    scrapeChapters Text
+    scrapeImages Text
     Primary web
     deriving Eq Show
   Comics

@@ -6,6 +6,7 @@
 
 module App.Config (
     module App.Config,
+    chromeDriverExe,
     defaultRootDir,
 ) where
 
@@ -61,19 +62,19 @@ chromeConfig :: WebDriverConfig IO
 chromeConfig =
     defaultWebDriverConfig
         & environment .~ appWebDriverEnvironment
-  where
-    appWebDriverEnvironment =
-        defaultWebDriverEnvironment
-            & env .~ appWDEnv
-            & logOptions .~ appWDLogOpts
-    appWDEnv =
-        defaultWDEnv
-            & remoteHostname .~ "localhost"
-            & remotePort .~ 9515
-            & responseFormat .~ SpecFormat
-    appWDLogOpts =
-        defaultWebDriverLogOptions
-            & logSilent .~ True
+    where
+        appWebDriverEnvironment =
+            defaultWebDriverEnvironment
+                & env .~ appWDEnv
+                & logOptions .~ appWDLogOpts
+        appWDEnv =
+            defaultWDEnv
+                & remoteHostname .~ "localhost"
+                & remotePort .~ 9515
+                & responseFormat .~ SpecFormat
+        appWDLogOpts =
+            defaultWebDriverLogOptions
+                & logSilent .~ True
 
 
 normalChrome :: Capabilities

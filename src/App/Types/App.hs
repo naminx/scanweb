@@ -11,6 +11,7 @@ import App.Types.Page
 import App.Types.ReleaseInfo
 import App.Types.URI
 import App.Types.Web
+import App.Types.WebInfo
 import Control.Lens (makeClassy)
 import Database.Esqueleto.Experimental (SqlBackend)
 import Lib

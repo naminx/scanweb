@@ -16,6 +16,7 @@ module App.Types (
     module App.Types.URL,
     module App.Types.Volume,
     module App.Types.Web,
+    module App.Types.WebInfo,
 ) where
 
 import App.Types.App
@@ -35,4 +36,5 @@ import App.Types.URI
 import App.Types.URL
 import App.Types.Volume
 import App.Types.Web
+import App.Types.WebInfo
 

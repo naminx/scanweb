@@ -45,6 +45,7 @@ executable scanweb
       App.Types.URL
       App.Types.Volume
       App.Types.Web
+      App.Types.WebInfo
       Data.WOE
       Import
       Init
@@ -61,25 +62,7 @@ executable scanweb
       Lib.WebDriver
       Options
       Progs
-      Pure
       Run
-      Web
-      Web.Common
-      Web.Common.Manga1001
-      Web.Common.MangaHatachi
-      Web.Common.WeLoveManga
-      Web.HachiManga.Com
-      Web.J8Jp.Com
-      Web.KlManga.Net
-      Web.Manga1001.In
-      Web.Manga1001.Su
-      Web.MangaGun.Com
-      Web.MangaRaw.Io
-      Web.MangaRaw.So
-      Web.RawDevArt.Com
-      Web.SyoSetu.Top
-      Web.WeLoMa.Art
-      Web.WeLoveManga.One
       WebDriver
       Paths_scanweb
   hs-source-dirs:

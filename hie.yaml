@@ -72,6 +72,9 @@ cradle:
     - path: "src/App/Types/Web.hs"
       component: "scanweb:exe:scanweb"
 
+    - path: "src/App/Types/WebInfo.hs"
+      component: "scanweb:exe:scanweb"
+
     - path: "src/Data/WOE.hs"
       component: "scanweb:exe:scanweb"
 
@@ -118,9 +121,6 @@ cradle:
       component: "scanweb:exe:scanweb"
 
     - path: "src/Progs.hs"
-      component: "scanweb:exe:scanweb"
-
-    - path: "src/Pure.hs"
       component: "scanweb:exe:scanweb"
 
     - path: "src/Run.hs"

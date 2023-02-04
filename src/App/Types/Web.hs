@@ -23,15 +23,13 @@ import Web.PathPieces (PathPiece (..), readFromPathPiece, showToPathPiece)
 
 data Web
     = MangaRawSo
-    | RawDevArtCom
+    | MangaRawIo
+    | Manga1001Su
     | WeLoMaArt
     | WeLoveMangaOne
     | KlMangaNet
     | HachiMangaCom
     | J8JpCom
-    | MangaRawIo
-    | MangaGunCom
-    | Manga1001Su
     deriving (Bounded, Eq, Generic, Ord, Read, Show)
     deriving (Enum) via WOE Web
 
@@ -39,15 +37,13 @@ data Web
 instance IsoEnum Web where
     mapping =
         [ (0, MangaRawSo)
-        , (1, RawDevArtCom)
-        , (2, WeLoMaArt)
-        , (3, WeLoveMangaOne)
-        , (4, KlMangaNet)
-        , (5, HachiMangaCom)
-        , (6, J8JpCom)
-        , (7, MangaRawIo)
-        , (8, MangaGunCom)
-        , (9, Manga1001Su)
+        , (1, MangaRawIo)
+        , (2, Manga1001Su)
+        , (3, WeLoMaArt)
+        , (4, WeLoveMangaOne)
+        , (5, KlMangaNet)
+        , (6, HachiMangaCom)
+        , (7, J8JpCom)
         ]
 
 
@@ -56,11 +52,11 @@ instance Hashable Web
 
 instance ToJSON Web where
     toJSON = Number . fromIntegral . fromMaybe raiseError . fromEnumSafely
-      where
-        raiseError =
-            error $
-                "internal error:"
-                    <> " missing value in IsoEnum mapping for Web type"
+        where
+            raiseError =
+                error $
+                    "internal error:"
+                        <> " missing value in IsoEnum mapping for Web type"
 
 
 instance FromJSON Web where
@@ -79,11 +75,11 @@ instance FromJSON Web where
 
 instance PathPiece Web where
     toPathPiece = showToPathPiece . fromMaybe raiseError . fromEnumSafely
-      where
-        raiseError =
-            error $
-                "internal error:"
-                    <> " missing value in IsoEnum mapping for Web type"
+        where
+            raiseError =
+                error $
+                    "internal error:"
+                        <> " missing value in IsoEnum mapping for Web type"
     fromPathPiece = readFromPathPiece >=> toEnumSafely
 
 
@@ -94,8 +90,8 @@ instance ToHttpApiData Web where
 instance FromHttpApiData Web where
     parseUrlPiece x =
         parseUrlPiece x >>= maybe leftValue Right . toEnumSafely
-      where
-        leftValue = Left "Web value out of bound"
+        where
+            leftValue = Left "Web value out of bound"
 
 
 instance PersistField Web where
@@ -104,18 +100,18 @@ instance PersistField Web where
             . fromIntegral
             . fromMaybe raiseError
             . fromEnumSafely
-      where
-        raiseError =
-            error $
-                "internal error:"
-                    <> " missing value in IsoEnum mapping for Web type"
+        where
+            raiseError =
+                error $
+                    "internal error:"
+                        <> " missing value in IsoEnum mapping for Web type"
     fromPersistValue (PersistInt64 n) =
         maybe toErrorMsg Right $ toEnumSafely $ fromIntegral n
-      where
-        toErrorMsg =
-            Left $
-                "converting to Web failed"
-                    <> (", value out of bound: " <> T.pack (show n))
+        where
+            toErrorMsg =
+                Left $
+                    "converting to Web failed"
+                        <> (", value out of bound: " <> T.pack (show n))
     fromPersistValue invalid =
         Left $
             "reading Web failed"

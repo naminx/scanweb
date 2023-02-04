@@ -47,9 +47,9 @@ newSqlBackend :: MonadUnliftIO m => Path Abs File -> m SqlBackend
 newSqlBackend dbFilePath = do
     conn <- liftIO $ open filePath
     liftIO $ wrapConnectionInfo (mkSqliteConnectionInfo filePath) conn defaultLogFunc
-  where
-    filePath = T.pack $ toFilePath dbFilePath
-    defaultLogFunc _ _ _ _ = return ()
+    where
+        filePath = T.pack $ toFilePath dbFilePath
+        defaultLogFunc _ _ _ _ = return ()
 
 
 initApp :: LogFunc -> ProcessContext -> Options -> SqlBackend -> SessionId -> App
@@ -58,7 +58,7 @@ initApp logFunction procContext cliOptions sqlBackend wdSess =
         { _logFunc = logFunction
         , _processContext = procContext
         , _options = cliOptions
-        , _currentWeb = RawDevArtCom
+        , _currentWeb = WeLoMaArt
         , _currentPage = Page 1
         , _currentSqlBackend = sqlBackend
         , _webTable = Map.empty

@@ -36,8 +36,8 @@ progScanWebs
 progScanWebs =
     traverse_ $
         [ scanWeb
-        , testComics
-        , testChapter
+        --      , testComics
+        --      , testChapter
         ]
             ^?! ix 0
 
@@ -79,36 +79,36 @@ progListWebs :: forall env s. (HasStateRef s env, HasApp s) => RIO env ()
 progListWebs = do
     webTab <- webTable <%= id
     printWebs webTab
-    where
-        printWebs =
-            traverse_ printWeb . sortWith (\(web, _) -> fromEnum web) . Map.toList
+  where
+    printWebs =
+        traverse_ printWeb . sortWith (\(web, _) -> fromEnum web) . Map.toList
 
-        printWeb (web, (domain_, _, _, _, _, _, _)) =
-            runSimpleApp . logInfo . display $
-                vivid Yellow
-                    <> TL.toStrict (format (lpadded 2 ' ' int) $ fromEnum web)
-                    <> (resetSGR <> ") ")
-                    <> (vivid Green <> unRText domain_)
-                    <> resetSGR
+    printWeb (web, wInfo) =
+        runSimpleApp . logInfo . display $
+            vivid Yellow
+                <> TL.toStrict (format (lpadded 2 ' ' int) $ fromEnum web)
+                <> (resetSGR <> ") ")
+                <> (vivid Green <> unRText (wInfo ^. webDomain))
+                <> resetSGR
 
 
 progListComics :: forall env s. (HasStateRef s env, HasApp s) => RIO env ()
 progListComics = do
     comicTab <- comicTable <%= id
     printComics comicTab
-    where
-        printComics =
-            traverse_ printComic . Map.toList
+  where
+    printComics =
+        traverse_ printComic . Map.toList
 
-        printComic (Comic {unComic = comic}, (Title {unTitle = title}, _, Volume vol, chap)) =
-            runSimpleApp . logInfo . display $
-                vivid Yellow
-                    <> TL.toStrict (format (lpadded 3 ' ' int) comic)
-                    <> (resetSGR <> ") ")
-                    <> (vivid Green <> title)
-                    <> ( vivid Black
-                            <> " (Vol."
-                            <> T.pack (show vol)
-                            <> (", Ch." <> T.pack (show chap) <> ")")
-                       )
-                    <> resetSGR
+    printComic (Comic {unComic = comic}, (Title {unTitle = title}, _, Volume vol, chap)) =
+        runSimpleApp . logInfo . display $
+            vivid Yellow
+                <> TL.toStrict (format (lpadded 3 ' ' int) comic)
+                <> (resetSGR <> ") ")
+                <> (vivid Green <> title)
+                <> ( vivid Black
+                        <> " (Vol."
+                        <> T.pack (show vol)
+                        <> (", Ch." <> T.pack (show chap) <> ")")
+                   )
+                <> resetSGR

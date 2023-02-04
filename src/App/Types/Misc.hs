@@ -12,22 +12,16 @@ import App.Types.Title
 import App.Types.URI
 import App.Types.Volume
 import App.Types.Web
+import App.Types.WebInfo
 import Lib
 import Path (reldir)
-import Text.URI (UserInfo, emptyURI)
-import Text.URI.QQ (host)
 
 
-type WebInfo = (Domain, Maybe UserInfo, URI, Text, Text, Text, Text)
 type WebTable = Map Web WebInfo
 type DomainTable = Map Domain Web
 type ComicInfo = (Title, Path Rel Dir, Volume, Chapter)
 type ComicTable = Map Comic ComicInfo
 type UrlTable = Map URI (Web, Comic)
-
-
-emptyWebInfo :: WebInfo
-emptyWebInfo = ([host||], Nothing, emptyURI, "", "", "", "")
 
 
 emptyComicInfo :: ComicInfo

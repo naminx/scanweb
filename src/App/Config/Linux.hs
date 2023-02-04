@@ -5,6 +5,7 @@
 
 module App.Config.Linux where
 
+
 #if defined(mingw32_HOST_OS)
 #else
 
@@ -21,7 +22,7 @@ userDataDir :: IsString s => s
 userDataDir =
     fromString $
         fromAbsDir
---          [absdir|/home/namin/.config/chromium/|]
+            -- [absdir|/home/namin/.config/chromium/|]
             [absdir|/home/namin/.config/google-chrome|]
 
 
@@ -29,8 +30,14 @@ chromeExe :: FilePath
 chromeExe =
     fromString $
         fromAbsFile
---          [absfile|/run/current-system/sw/bin/chromium|]
+            -- [absfile|/run/current-system/sw/bin/chromium|]
             [absfile|/run/current-system/sw/bin/google-chrome-stable|]
 
+
+chromeDriverExe :: FilePath
+chromeDriverExe =
+    fromString $
+        fromAbsFile
+            [absfile|/run/current-system/sw/bin/chromedriver|]
 
 #endif

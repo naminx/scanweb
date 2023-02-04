@@ -48,8 +48,6 @@ import Formatting.Formatters (int, text)
 import Lib hiding (domain)
 import qualified Lib as URI
 import Network.HTTP.Client (HttpException)
-import RIO.Partial (succ)
-import Web.Common (tryParseChapter, tryParseURI)
 
 -- import Network.Wreq (defaults, header, responseBody, responseHeader)
 -- import Network.Wreq.Session (getWith)
@@ -69,9 +67,16 @@ import Path (
  )
 import qualified RIO.ByteString.Lazy as BL
 import qualified RIO.Map as Map (fromList, toList)
+import RIO.Partial (succ)
 import RIO.Process (HasProcessContext (..))
 import qualified RIO.Text as T (break, pack, takeWhile, unpack)
-import qualified RIO.Text.Lazy as TL (Text, fromStrict, take, toStrict, unpack)
+import qualified RIO.Text.Lazy as TL (
+    Text,
+    fromStrict,
+    take,
+    toStrict,
+    unpack,
+ )
 import System.Console.ANSI (Color (..))
 import System.Directory (createDirectory)
 import System.Random (randomRIO)
@@ -80,13 +85,32 @@ import Text.Megaparsec.Char.Lexer (decimal)
 import Text.Megaparsec.Error (ParseErrorBundle)
 import Text.Pretty.Simple (pPrint)
 import Text.RawString.QQ (r)
-import Text.URI (URI, emptyURI, relativeTo, render, renderBs, renderStr, unRText)
-import Text.URI.Lens (authHost, uriAuthority, uriFragment, uriPath, uriQuery, uriScheme)
-import Web
+import Text.URI (
+    URI,
+    emptyURI,
+    relativeTo,
+    render,
+    renderBs,
+    renderStr,
+    unRText,
+ )
+import Text.URI.Lens (
+    authHost,
+    uriAuthority,
+    uriFragment,
+    uriPath,
+    uriQuery,
+    uriScheme,
+ )
 import Web.Api.WebDriver hiding (Page)
+import Web.Common (tryParseChapter, tryParseURI)
 
 
-set_ :: PersistEntity val => SqlExpr (Entity val) -> [SqlExpr (Entity val) -> SqlExpr Update] -> SqlQuery ()
+set_
+    :: PersistEntity val
+    => SqlExpr (Entity val)
+    -> [SqlExpr (Entity val) -> SqlExpr Update]
+    -> SqlQuery ()
 set_ = ES.set
 
 
@@ -105,8 +129,8 @@ mkWebTable = do
     webTab <- queryWebTable sqlBackend
     webTable .= webTab
     domainTable .= Map.fromList (convertEntry <$> Map.toList webTab)
-    where
-        convertEntry (h, (d, _, _, _, _, _, _)) = (d, h)
+  where
+    convertEntry (h, wInfo) = (wInfo ^. webDomain, h)
 
 
 mkComicTable :: forall s env. (HasStateRef s env, HasApp s) => RIO env ()
@@ -128,20 +152,28 @@ setWebTo web = do
     currentWeb .= web
     currentPage .= Page 1
     webTab <- webTable <%= id
-    webInfo <- maybe (throwM $ LookupWebFailed web) return $ webTab ^? ix web
-    currentWebInfo .= webInfo
+    webinfo <- maybe (throwM $ LookupWebFailed web) return $ webTab ^? ix web
+    currentWebInfo .= webinfo
 
 
-setComicTo :: Comic -> forall env s. (HasStateRef s env, HasApp s) => RIO env ()
+setComicTo
+    :: Comic
+    -> forall env s
+     . (HasStateRef s env, HasApp s)
+    => RIO env ()
 setComicTo comic = do
     currentComic .= comic
     comicTab <- comicTable <%= id
-    comicInfo <- maybe (throwM $ LookupComicFailed comic) return $ comicTab ^? ix comic
+    comicInfo <-
+        maybe (throwM $ LookupComicFailed comic) return $
+            comicTab ^? ix comic
     currentComicInfo .= comicInfo
     urlTab <- urlTable <%= id
     let revUrlTab = Map.fromList $ swap <$> Map.toList urlTab
     web <- currentWeb <%= id
-    url <- maybe (throwM $ LookupWebComicFailed (web, comic)) return $ revUrlTab ^? ix (web, comic)
+    url <-
+        maybe (throwM $ LookupWebComicFailed (web, comic)) return $
+            revUrlTab ^? ix (web, comic)
     currentComicUrl .= url
 
 
@@ -161,9 +193,9 @@ runWdSession wdSess action = do
     case result of
         Right a -> return a
         Left e -> throwM e
-    where
-        runAction = execWebDriverT $ chromeConfig & initialSession ?~ wdSess
-        initialSession = initialState . userState . sessionId
+  where
+    runAction = execWebDriverT $ chromeConfig & initialSession ?~ wdSess
+    initialSession = initialState . userState . sessionId
 
 
 updateNewReleases
@@ -176,40 +208,39 @@ updateNewReleases = do
     if page > maxPage
         then return []
         else do
-            domain <- currentWebInfo . _1 <%= id
+            domain <- currentWebInfo . webDomain <%= id
             runSimpleApp . logInfo . display $
                 vivid Blue
                     <> unRText domain
                     <> (vivid Black <> " [" <> T.pack (show page) <> "]")
-            newReleaseUrl <- getNewReleaseUrl
-            runWd $ navigateToStealth $ render newReleaseUrl
-            waitForLoaded newReleaseUrl
+            comicListScript <- currentWebInfo . genUrl <%= id
+            newReleaseUrl <- runWd $ executeScript comicListScript [toJSON page]
+            runWd $
+                navigateToStealth $
+                    "https://" <> unRText domain <> (newReleaseUrl ^?! _String)
+            waitForLoaded
             waitTime <- getRandomWaitTime
             liftIO $ sleep waitTime
-            {--
-            markup <- runWd getMarkup
-            newReleases <-
-                scrapeComics markup
-                    <&> filter isRight
-                    <&> mapRelativeTo newReleaseUrl _1
-            --}
-            scrapeComicsScript <- currentWebInfo . _4 <%= id
+            scrapeComicsScript <- currentWebInfo . scrapeComics <%= id
             newReleases <-
                 runWd (executeScript scrapeComicsScript [])
-                    <&> (view _Array >>> toList >>> fmap (liftA2 (,) . js2URI <*> js2MaybeRelInfo))
+                    <&> ( view _Array
+                            >>> toList
+                            >>> fmap (liftA2 (,) . js2URI <*> js2MaybeRelInfo)
+                        )
             when (null newReleases) $ throwM ComicLinksNotFound
-            sentinel <- currentWebInfo . _3 <%= id
-            let hit = elemOf (folded . _Right . _1) sentinel newReleases
+            webSentinel <- currentWebInfo . sentinel <%= id
+            let hit = elemOf (folded . _Right . _1) webSentinel newReleases
             if hit
                 then
                     traverse tryClickAndDownloadComic $
-                        takeWhile (urlNotMatch sentinel) newReleases
+                        takeWhile (urlNotMatch webSentinel) newReleases
                 else do
                     result <- traverse tryClickAndDownloadComic newReleases
                     currentPage %= succ
                     (result <>) <$> updateNewReleases
-    where
-        urlNotMatch = (preview (_Right . _1) >>>) . (/=) . Just
+  where
+    urlNotMatch = (preview (_Right . _1) >>>) . (/=) . Just
 
 
 js2URI :: Value -> Try URI
@@ -222,40 +253,40 @@ js2MaybeURI x = x ^? _String ^. tryParseURI
 
 js2MaybeRelInfo :: Value -> Try (Maybe ReleaseInfo)
 js2MaybeRelInfo = sequence . liftA2 (<>) tryBook tryEpisode
-    where
-        tryBook =
-            preview $
-                key "volume"
-                    . _String
-                    . to (parseEither decimal)
-                    . to (fmap $ Book . Volume)
-        tryEpisode =
-            preview $
-                key "chapter"
-                    . _String
-                    . to Just
-                    . tryParseChapter mkChapter
-                    . to (fmap Episode)
+  where
+    tryBook =
+        preview $
+            key "volume"
+                . _String
+                . to (parseEither decimal)
+                . to (fmap $ Book . Volume)
+    tryEpisode =
+        preview $
+            key "chapter"
+                . _String
+                . to Just
+                . tryParseChapter mkChapter
+                . to (fmap Episode)
 
 
 js2RelInfo :: Value -> Try ReleaseInfo
 js2RelInfo =
     fromMaybe (Left $ toException ChapterLinksNotFound)
         . liftA2 (<>) tryBook tryEpisode
-    where
-        tryBook =
-            preview $
-                key "volume"
-                    . _String
-                    . to (parseEither decimal)
-                    . to (fmap $ Book . Volume)
-        tryEpisode =
-            preview $
-                key "chapter"
-                    . _String
-                    . to Just
-                    . tryParseChapter mkChapter
-                    . to (fmap Episode)
+  where
+    tryBook =
+        preview $
+            key "volume"
+                . _String
+                . to (parseEither decimal)
+                . to (fmap $ Book . Volume)
+    tryEpisode =
+        preview $
+            key "chapter"
+                . _String
+                . to Just
+                . tryParseChapter mkChapter
+                . to (fmap Episode)
 
 
 mapRelativeTo :: forall s. URI -> Lens' s URI -> [Try s] -> [Try s]
@@ -268,9 +299,10 @@ mapRelativeTo base focus = map $ applyRelativeTo base focus
 --     2) if `relativeTo` fails, return `Left InvalidBaseUrl`
 applyRelativeTo :: forall s. URI -> Lens' s URI -> Try s -> Try s
 applyRelativeTo _ _ value@(Left _) = value
-applyRelativeTo base focus (Right value) = case (value ^. focus) `relativeTo` base of
-    Just url -> Right $ value & focus .~ url
-    Nothing -> Left $ toException $ InvalidBaseUrl $ renderStr base
+applyRelativeTo base focus (Right value) =
+    case (value ^. focus) `relativeTo` base of
+        Just url -> Right $ value & focus .~ url
+        Nothing -> Left $ toException $ InvalidBaseUrl $ renderStr base
 
 
 getMarkup :: WebDriverT IO TL.Text
@@ -297,10 +329,13 @@ clickAndDownloadComic
     => Try (URI, Maybe ReleaseInfo)
     -> RIO env URI
 clickAndDownloadComic (Left someException) = liftIO $ do
-    runSimpleApp $ logError $ display $ vivid Red <> T.pack (displayException someException)
+    runSimpleApp $
+        logError $
+            display $
+                vivid Red <> T.pack (displayException someException)
     throwM SomeChaptersNotDownloaded
 clickAndDownloadComic (Right (url, maybeRelInfo)) = do
-    domain <- currentWebInfo . _1 <%= id
+    domain <- currentWebInfo . webDomain <%= id
     if url ^? uriAuthority . _Right . authHost /= Just domain
         then return url
         else do
@@ -317,7 +352,12 @@ clickAndDownloadComic (Right (url, maybeRelInfo)) = do
                         currentComicInfo <%= id
                     if maybeRelInfo `notNewerThan` (volumeLast, chapterLast)
                         then liftIO $ do
-                            runSimpleApp $ logInfo $ display $ vivid Green <> title <> " is up to date"
+                            runSimpleApp $
+                                logInfo $
+                                    display $
+                                        vivid Green
+                                            <> title
+                                            <> " is up to date"
                             return url
                         else do
                             newReleaseInfo .= maybeRelInfo
@@ -326,7 +366,12 @@ clickAndDownloadComic (Right (url, maybeRelInfo)) = do
                             result <- clickAndScanComic
                             case result of
                                 Nothing -> liftIO $ do
-                                    runSimpleApp $ logInfo $ display $ vivid Green <> title <> " is up to date"
+                                    runSimpleApp $
+                                        logInfo $
+                                            display $
+                                                vivid Green
+                                                    <> title
+                                                    <> " is up to date"
                                     return url
                                 Just relInfo -> do
                                     updateComicTable comic relInfo
@@ -341,7 +386,12 @@ notNewerThan relInfo (volumeLast, chapterLast) = case relInfo of
     Just (Episodes (_, chapterEnd)) -> chapterEnd <= chapterLast
 
 
-updateComicTable :: forall env s. (HasStateRef s env, HasApp s) => Comic -> ReleaseInfo -> RIO env ()
+updateComicTable
+    :: forall env s
+     . (HasStateRef s env, HasApp s)
+    => Comic
+    -> ReleaseInfo
+    -> RIO env ()
 updateComicTable comic = \case
     Episode chapter ->
         updateComicTableChapter comic chapter
@@ -351,7 +401,12 @@ updateComicTable comic = \case
         updateComicTableChapter comic chapter
 
 
-updateComicTableChapter :: forall env s. (HasStateRef s env, HasApp s) => Comic -> Chapter -> RIO env ()
+updateComicTableChapter
+    :: forall env s
+     . (HasStateRef s env, HasApp s)
+    => Comic
+    -> Chapter
+    -> RIO env ()
 updateComicTableChapter comic chapter = do
     bracket (currentSqlBackend <%= id) (runSqlConn transactionUndo) $ do
         runSqlConn $ do
@@ -362,7 +417,12 @@ updateComicTableChapter comic chapter = do
     comicTable . ix comic . _4 .= chapter
 
 
-updateComicTableVolume :: forall env s. (HasStateRef s env, HasApp s) => Comic -> Volume -> RIO env ()
+updateComicTableVolume
+    :: forall env s
+     . (HasStateRef s env, HasApp s)
+    => Comic
+    -> Volume
+    -> RIO env ()
 updateComicTableVolume comic volume = do
     sqlBackend <- currentSqlBackend <%= id
     runSql sqlBackend $
@@ -377,7 +437,8 @@ openAndScanComic
      . (HasStateRef s env, HasApp s, HasLogFunc s, HasProcessContext s)
     => RIO env (Maybe ReleaseInfo)
 openAndScanComic = do
-    (Title {unTitle = title}, _, volumeLast, chapterLast) <- currentComicInfo <%= id
+    (Title {unTitle = title}, _, volumeLast, chapterLast) <-
+        currentComicInfo <%= id
     runSimpleApp . logInfo . display $
         vivid Black
             <> "scanning "
@@ -389,11 +450,10 @@ openAndScanComic = do
                )
     comicUrl <- currentComicUrl <%= id
     runWd $ navigateToStealth $ render comicUrl
-    waitForLoaded comicUrl
+    waitForLoaded
     -- markup <- runWd getMarkup
     maybeRelInfo <- newReleaseInfo <%= id
-    scrapeLatestScript <- currentWebInfo . _5 <%= id
-    -- latestChapUrl <- scrapeLatestRelInfo markup
+    scrapeLatestScript <- currentWebInfo . scrapeLatest <%= id
     latestChapUrl <-
         runWd (executeScript scrapeLatestScript [])
             <&> preview (_String . to Just . tryParseURI)
@@ -402,23 +462,21 @@ openAndScanComic = do
                 (liftA2 (,))
                 (maybeRelInfo ^.. _Just . to Right)
                 (latestChapUrl ^.. _Just)
-    scrapeChaptersScript <- currentWebInfo . _6 <%= id
+    scrapeChaptersScript <- currentWebInfo . scrapeChapters <%= id
     newReleases <-
         runWd (executeScript scrapeChaptersScript [])
-            <&> (view _Array >>> toList >>> fmap (liftA2 (,) . js2RelInfo <*> js2URI))
+            <&> ( view _Array
+                    >>> toList
+                    >>> fmap (liftA2 (,) . js2RelInfo <*> js2URI)
+                )
             <&> (<> newRelease)
             <&> uniqRelease
             <&> filterBy (_Right . _1) (`newerThan` (volumeLast, chapterLast))
-    {--
-    newReleases <- -- :: RIO env [Try (ReleaseInfo, URI)]
-        scrapeRelInfos markup
-            <&> (<> newRelease)
-            <&> uniqRelease
-            <&> filterBy (_Right . _1) (`newerThan` (volumeLast, chapterLast))
-    --}
     let chapters =
             newReleases
-                & iover (traversed . _Right) (\n (c, u) -> (c, u, u, length newReleases - n))
+                & iover
+                    (traversed . _Right)
+                    (\n (c, u) -> (c, u, u, length newReleases - n))
                 <&> applyRelativeTo comicUrl _2
     result <- traverse tryDownloadRelease chapters
     when (any (has _Left) result) $
@@ -450,32 +508,21 @@ openAndDownloadRelease relInfo = do
             <> (vivid Yellow <> title)
     comicUrl <- currentComicUrl <%= id
     runWd $ navigateToStealth $ render comicUrl
-    waitForLoaded comicUrl
-    -- markup <- runWd getMarkup
-    {--
-    latestChapUrl <- scrapeLatestRelInfo markup
-    let newRelease =
-            zipWith
-                (liftA2 (,))
-                [Right relInfo]
-                (latestChapUrl ^.. _Just)
-    --}
-    scrapeChaptersScript <- currentWebInfo . _6 <%= id
+    waitForLoaded
+    scrapeChaptersScript <- currentWebInfo . scrapeChapters <%= id
     targetChapter <-
         runWd (executeScript scrapeChaptersScript [])
-            <&> (view _Array >>> toList >>> fmap (liftA2 (,) . js2RelInfo <*> js2URI))
+            <&> ( view _Array
+                    >>> toList
+                    >>> fmap (liftA2 (,) . js2RelInfo <*> js2URI)
+                )
             <&> uniqRelease
             <&> equalsTo relInfo
-    {--
-    targetChapter <-
-        scrapeRelInfos markup
-            -- <&> (<> newRelease)
-            <&> uniqRelease
-            <&> equalsTo relInfo
-    --}
     let chapters =
             targetChapter
-                & iover (traversed . _Right) (\n (c, u) -> (c, u, u, length targetChapter - n))
+                & iover
+                    (traversed . _Right)
+                    (\n (c, u) -> (c, u, u, length targetChapter - n))
                 <&> applyRelativeTo comicUrl _2
     result <- traverse tryDownloadRelease chapters
     when (any (has _Left) result) $
@@ -483,14 +530,11 @@ openAndDownloadRelease relInfo = do
     if lastOf (takingWhile isRight folded . _Right) result == Just relInfo
         then return ()
         else throwM SomeChaptersNotDownloaded
-    where
-        equalsTo chap = toListOf (folded . filtered (preview (_Right . _1) >>> (== Just chap)))
+  where
+    equalsTo chap =
+        toListOf
+            (folded . filtered (preview (_Right . _1) >>> (== Just chap)))
 
-
-{--
-gotoPage :: forall env s. (HasStateRef s env, HasApp s) => Text -> RIO env ()
-gotoPage url = ignoreReturn $ executeJS [] $ "window.location.href = '" <> url <> "';"
---}
 
 -- Returns `Just` the last chapter successfully downloaded.
 -- Returns `Nothing` if the comic is up to date.
@@ -500,7 +544,8 @@ clickAndScanComic
      . (HasStateRef s env, HasApp s, HasLogFunc s, HasProcessContext s)
     => RIO env (Maybe ReleaseInfo)
 clickAndScanComic = do
-    (Title {unTitle = title}, _, volumeLast, chapterLast) <- currentComicInfo <%= id
+    (Title {unTitle = title}, _, volumeLast, chapterLast) <-
+        currentComicInfo <%= id
     runSimpleApp . logInfo . display $
         vivid Black
             <> "scanning "
@@ -514,10 +559,10 @@ clickAndScanComic = do
     newReleaseWin <- runWd getWindowHandle
     newWin <- execNewWin (clickAnchorTargetBlank comicUrl) []
     runWd $ switchToWindow newWin
-    waitForLoaded comicUrl
+    waitForLoaded
     -- markup <- runWd getMarkup
     maybeRelInfo <- newReleaseInfo <%= id
-    scrapeLatestScript <- currentWebInfo . _5 <%= id
+    scrapeLatestScript <- currentWebInfo . scrapeLatest <%= id
     -- latestChapUrl <- scrapeLatestRelInfo markup
     latestChapUrl <-
         runWd (executeScript scrapeLatestScript [])
@@ -527,24 +572,26 @@ clickAndScanComic = do
                 (liftA2 (,))
                 (maybeRelInfo ^.. _Just . to Right)
                 (latestChapUrl ^.. _Just)
-    scrapeChaptersScript <- currentWebInfo . _6 <%= id
-    {--
-    releases <-
-        scrapeRelInfos markup
-            <&> (<> newRelease)
-            <&> uniqRelease
-    --}
+    scrapeChaptersScript <- currentWebInfo . scrapeChapters <%= id
     releases <-
         runWd (executeScript scrapeChaptersScript [])
-            <&> (view _Array >>> toList >>> fmap (liftA2 (,) . js2RelInfo <*> js2URI))
+            <&> ( view _Array
+                    >>> toList
+                    >>> fmap (liftA2 (,) . js2RelInfo <*> js2URI)
+                )
             <&> (<> newRelease)
             <&> uniqRelease
     when (null releases) $ throwM ChapterLinksNotFound
     let newReleases =
-            releases & filterBy (_Right . _1) (`newerThan` (volumeLast, chapterLast))
+            releases
+                & filterBy
+                    (_Right . _1)
+                    (`newerThan` (volumeLast, chapterLast))
         chapters =
             newReleases
-                & iover (traversed . _Right) (\n (c, u) -> (c, u, u, length newReleases - n))
+                & iover
+                    (traversed . _Right)
+                    (\n (c, u) -> (c, u, u, length newReleases - n))
                 <&> applyRelativeTo comicUrl _2
     result <- traverse tryDownloadRelease chapters
     runWd $ closeWindow >> switchToWindow newReleaseWin
@@ -582,7 +629,10 @@ tryDownloadRelease args = case args of
 
 printException :: Exception e => e -> RIO env ()
 printException someException = liftIO $ do
-    runSimpleApp $ logError $ display $ vivid Red <> T.pack (displayException someException)
+    runSimpleApp $
+        logError $
+            display $
+                vivid Red <> T.pack (displayException someException)
 
 
 downloadRelease
@@ -590,81 +640,85 @@ downloadRelease
      . (HasStateRef s env, HasApp s, HasLogFunc s, HasProcessContext s)
     => (ReleaseInfo, URI, URI, Int)
     -> RIO env ReleaseInfo
-downloadRelease (relInfo, absUrl, _relUrl, _count) = bracketDownloadRelease $ do
-    rootFolder <- options . rootDir <%= id
-    comicFolder <- currentComicInfo . _2 <%= id
-    let releaseDir = releaseFolder relInfo
-        targetFolder = rootFolder </> comicFolder </> releaseDir
-    comicWin <- runWd getWindowHandle
-    newWin <- execNewWin (clickAnchorTargetBlank absUrl) []
-    runWd $ switchToWindow newWin
-    waitForLoaded absUrl
-    images <- waitForImagesToLoad
-    when (null images) $
-        throwM SomeImagesNotDownloaded
-    liftIO $ createDirectory $ toFilePath targetFolder
-    currentReferer .= absUrl
-    runningFileName <-
-        traverse (parseRelFile . (TL.unpack . format (lpadded 3 '0' int))) [1 .. length images]
-    result <-
-        bracketDownloadImages $
-            traverse tryDownloadImage $
-                zip images ((targetFolder </>) <$> runningFileName)
-    runWd $ closeWindow >> switchToWindow comicWin
-    traverseOf_ (each . _Left) printExceptionEx result
-    when (any (has _Left) result) $
-        throwM SomeImagesNotDownloaded
-    return relInfo
-    where
-        bracketDownloadRelease = bracket_ printDownloadingChapter printNewLine
+downloadRelease (relInfo, absUrl, _relUrl, _count) =
+    bracketDownloadRelease $ do
+        rootFolder <- options . rootDir <%= id
+        comicFolder <- currentComicInfo . _2 <%= id
+        let releaseDir = releaseFolder relInfo
+            targetFolder = rootFolder </> comicFolder </> releaseDir
+        comicWin <- runWd getWindowHandle
+        newWin <- execNewWin (clickAnchorTargetBlank absUrl) []
+        runWd $ switchToWindow newWin
+        waitForLoaded
+        images <- waitForImagesToLoad
+        when (null images) $
+            throwM SomeImagesNotDownloaded
+        liftIO $ createDirectory $ toFilePath targetFolder
+        currentReferer .= absUrl
+        runningFileName <-
+            traverse
+                (parseRelFile . (TL.unpack . format (lpadded 3 '0' int)))
+                [1 .. length images]
+        result <-
+            bracketDownloadImages $
+                traverse tryDownloadImage $
+                    zip images ((targetFolder </>) <$> runningFileName)
+        runWd $ closeWindow >> switchToWindow comicWin
+        traverseOf_ (each . _Left) printExceptionEx result
+        when (any (has _Left) result) $
+            throwM SomeImagesNotDownloaded
+        return relInfo
+  where
+    bracketDownloadRelease = bracket_ printDownloadingChapter printNewLine
 
-        printDownloadingChapter = do
-            logSticky
-                =<< stickyLine
-                    <.= ( vivid Black <> "downloading " <> case relInfo of
-                            Book _ -> "volume "
-                            _ -> "chapter "
-                        )
-                        <> (vivid Yellow <> T.pack (showReleaseInfo relInfo))
+    printDownloadingChapter = do
+        logSticky
+            =<< stickyLine
+                <.= ( vivid Black <> "downloading " <> case relInfo of
+                        Book _ -> "volume "
+                        _ -> "chapter "
+                    )
+                    <> (vivid Yellow <> T.pack (showReleaseInfo relInfo))
 
-        printNewLine = do
-            logStickyDone =<< stickyLine <%= id
+    printNewLine = do
+        logStickyDone =<< stickyLine <%= id
 
-        bracketDownloadImages =
-            bracket_
-                (logSticky =<< stickyLine <<>= vivid Black <> " [")
-                (logSticky =<< stickyLine <<>= vivid Black <> "]")
+    bracketDownloadImages =
+        bracket_
+            (logSticky =<< stickyLine <<>= vivid Black <> " [")
+            (logSticky =<< stickyLine <<>= vivid Black <> "]")
 
-        printExceptionEx someException = case fromException someException of
-            Just e -> do
-                runSimpleApp $
-                    logWarn $
-                        display $
-                            vivid Yellow
-                                <> T.pack
-                                    ( displayException
-                                        (e :: InvalidImageSubtype)
-                                    )
-            _ -> printException someException
+    printExceptionEx someException = case fromException someException of
+        Just e -> do
+            runSimpleApp $
+                logWarn $
+                    display $
+                        vivid Yellow
+                            <> T.pack
+                                ( displayException
+                                    (e :: InvalidImageSubtype)
+                                )
+        _ -> printException someException
 
-        waitForImagesToLoad = do
-            -- markup <- runWd getMarkup
-            -- images <- scrapeImages markup <&> mapRelativeTo absUrl id
-            scrapeImagesScript <- currentWebInfo . _7 <%= id
-            images <-
-                runWd (executeScript scrapeImagesScript [])
-                    <&> (view _Array >>> toList >>> fmap (preview _String >>> view tryParseURI))
-            if has
-                ( folded
-                    . _Right
-                    . to (not . null . T.indices "image/gif" . render)
-                    . filtered id
-                )
-                images
-                then do
-                    liftIO $ sleep 1
-                    waitForImagesToLoad
-                else return images
+    waitForImagesToLoad = do
+        scrapeImagesScript <- currentWebInfo . scrapeImages <%= id
+        images <-
+            runWd (executeScript scrapeImagesScript [])
+                <&> ( view _Array
+                        >>> toList
+                        >>> fmap (preview _String >>> view tryParseURI)
+                    )
+        if has
+            ( folded
+                . _Right
+                . to (not . null . T.indices "image/gif" . render)
+                . filtered id
+            )
+            images
+            then do
+                liftIO $ sleep 1
+                waitForImagesToLoad
+            else return images
 
 
 releaseFolder :: ReleaseInfo -> Path Rel Dir
@@ -692,7 +746,10 @@ volumeFolder (Volume volume) = format (lpadded 2 '0' int) volume
 
 chapterRangeFolder :: (Chapter, Chapter) -> TL.Text
 chapterRangeFolder (chapterBegin, chapterEnd) =
-    format (text % "-" % text) (chapterFolder chapterBegin) (chapterFolder chapterEnd)
+    format
+        (text % "-" % text)
+        (chapterFolder chapterBegin)
+        (chapterFolder chapterEnd)
 
 
 showReleaseInfo :: ReleaseInfo -> String
@@ -719,29 +776,38 @@ tryDownloadImage (tryUrl, imgFileName) = case tryUrl of
             Left someException -> case fromException someException of
                 Just e -> returnLeft Red $ toException (e :: IOException)
                 _ -> case fromException someException of
-                    Just e -> returnLeft Red $ toException (e :: HttpException)
+                    Just e ->
+                        returnLeft Red $
+                            toException (e :: HttpException)
                     _ -> case fromException someException of
-                        Just e -> returnLeft Red $ toException (e :: InvalidContentType)
+                        Just e ->
+                            returnLeft Red $
+                                toException (e :: InvalidContentType)
                         _ -> case fromException someException of
-                            Just e -> returnLeft Yellow $ toException (e :: InvalidImageSubtype)
+                            Just e ->
+                                returnLeft Yellow $
+                                    toException (e :: InvalidImageSubtype)
                             _ -> throwM someException
-    where
-        putTick color = do
-            logSticky =<< stickyLine <<>= vivid color <> T.pack tick
+  where
+    putTick color = do
+        logSticky =<< stickyLine <<>= vivid color <> T.pack tick
 
-        tick = case reverse $ toFilePath imgFileName of
-            oneth : tenth : _ ->
-                case oneth of
-                    '0' -> tenth : "0"
-                    '5' -> "|"
-                    _ -> "·"
-            _ -> "!"
+    tick = case reverse $ toFilePath imgFileName of
+        oneth : tenth : _ ->
+            case oneth of
+                '0' -> tenth : "0"
+                '5' -> "|"
+                _ -> "·"
+        _ -> "!"
 
-        returnLeft color someException =
-            putTick color >> return (Left someException)
+    returnLeft color someException =
+        putTick color >> return (Left someException)
 
 
-getRandomWaitTime :: forall env s. (HasStateRef s env, HasApp s) => RIO env Seconds
+getRandomWaitTime
+    :: forall env s
+     . (HasStateRef s env, HasApp s)
+    => RIO env Seconds
 getRandomWaitTime = do
     web <- currentWeb <%= id
     case web of
@@ -751,7 +817,11 @@ getRandomWaitTime = do
 
 -- Wait some seconds, for a new `WindowHandle` not exist in `[WindowHandle]`
 -- and return the new `WindowHandle`
-waitForNewWin :: forall env s. (HasStateRef s env, HasApp s) => [ContextId] -> RIO env ContextId
+waitForNewWin
+    :: forall env s
+     . (HasStateRef s env, HasApp s)
+    => [ContextId]
+    -> RIO env ContextId
 waitForNewWin allExistingWins = do
     newWins <- runWd getWindowHandles
     waitTime <- getRandomWaitTime
@@ -763,7 +833,11 @@ waitForNewWin allExistingWins = do
 
 
 -- Wait repeatedly until the closing `WindowHandle` not exist in `[WindowHandle]`
-waitForClosingWin :: forall env s. (HasStateRef s env, HasApp s) => ContextId -> RIO env ()
+waitForClosingWin
+    :: forall env s
+     . (HasStateRef s env, HasApp s)
+    => ContextId
+    -> RIO env ()
 waitForClosingWin closingWin = do
     allWins <- runWd getWindowHandles
     waitTime <- getRandomWaitTime
@@ -772,33 +846,31 @@ waitForClosingWin closingWin = do
         waitForClosingWin closingWin
 
 
-waitForLoaded :: forall env s. (HasStateRef s env, HasApp s) => URI -> RIO env ()
-waitForLoaded _ = do
-    keyElem <- keyElement
-    runWd $ waitUntil (pred keyElem) $ round $ minWaitTime * 1000
-    where
-        pred keyElem = "document.querySelectorAll(\"" <> keyElem <> "\").length > 0"
+waitForLoaded :: forall env s. (HasStateRef s env, HasApp s) => RIO env ()
+waitForLoaded = do
+    isLoadedScript <- currentWebInfo . isLoaded <%= id
+    runWd $ waitUntil isLoadedScript $ round $ minWaitTime * 1000
 
 
 waitUntil :: Text -> Int -> WebDriverT IO ()
 waitUntil func msec =
     void $ executeScript jsWaitUntil [toJSON func, toJSON msec]
-    where
-        jsWaitUntil =
-            [r|
-    return await new Promise((resolve, reject) => {
-      const timeWas = new Date();
-      const pred = new Function("return (" + arguments[0] + ");");
-      const timeout = arguments[1];
-      const wait = setInterval(function() {
-        const timespan = new Date() - timeWas;
-        if (pred() || timespan > timeout) {
-          clearInterval(wait);
-          resolve();
-        }
-      }, 200);
-    })
-|]
+  where
+    jsWaitUntil =
+        [r|
+return await new Promise((resolve, reject) => {
+  const timeWas = new Date();
+  const pred = new Function("return (" + arguments[0] + ");");
+  const timeout = arguments[1];
+  const wait = setInterval(function() {
+    const timespan = new Date() - timeWas;
+    if (pred() || timespan > timeout) {
+      clearInterval(wait);
+      resolve();
+    }
+  }, 200);
+})
+        |]
 
 
 execNewWin :: forall env s. (HasStateRef s env, HasApp s) => Text -> [Value] -> RIO env ContextId
@@ -812,10 +884,26 @@ downloadImage :: forall env s. (HasStateRef s env, HasApp s) => (URI, Path Abs F
 downloadImage (url, filename) = do
     base64 <- runWd $ executeAsyncScript xmlHttpRequest [toJSON $ render url]
     case parseOnly parseEmbeddedData $ encodeUtf8 $ base64 ^. _String of
-        Right (ext, binaryData) -> case addExtension ("." <> T.unpack ext) filename of
-            Right fullFileName -> liftIO $ BS.writeFile (toFilePath fullFileName) binaryData
-            Left pathError ->
-                throwM $ InvalidContentType $ displayException pathError
+        Right (ext, binaryData) ->
+            case addExtension ("." <> T.unpack ext) filename of
+                Right fullFileName -> liftIO $ BS.writeFile (toFilePath fullFileName) binaryData
+                Left pathError ->
+                    throwM $ InvalidContentType $ displayException pathError
+        Left parseError ->
+            throwM $ InvalidContentType parseError
+
+
+downloadImageAux :: SessionId -> (URI, Path Abs File) -> IO ()
+downloadImageAux sess (url, filename) = do
+    base64 <- runWdSession sess $ executeAsyncScript xmlHttpRequest [toJSON $ render url]
+    case parseOnly parseEmbeddedData $ encodeUtf8 $ base64 ^. _String of
+        Right (ext, binaryData) ->
+            case addExtension ("." <> T.unpack ext) filename of
+                Right fullFileName -> do
+                    liftIO $ BS.writeFile (toFilePath fullFileName) binaryData
+                    pPrint filename
+                Left pathError ->
+                    throwM $ InvalidContentType $ displayException pathError
         Left parseError ->
             throwM $ InvalidContentType parseError
 
@@ -871,9 +959,9 @@ selectorAnchor url =
         <> (",a[href='" <> render url <> "/']")
         <> (",a[href='" <> render (url & removeHttps & removeDomain True) <> "/']")
         <> (",a[href='" <> render (url & removeHttps & removeDomain False) <> "/']")
-    where
-        removeHttps = uriScheme .~ Nothing
-        removeDomain isPathAbsolute = uriAuthority .~ Left isPathAbsolute
+  where
+    removeHttps = uriScheme .~ Nothing
+    removeDomain isPathAbsolute = uriAuthority .~ Left isPathAbsolute
 
 
 clickAnchorTargetBlank :: URI -> Text
@@ -924,7 +1012,7 @@ scanWeb web = do
     let lastSuccess = result ^.. takingWhile (has _Right) (backwards folded) . _Right & lastOf folded
     traverse_ (updateWebTable web) lastSuccess
 
-
+{--
 testComics
     :: forall env s
      . (HasStateRef s env, HasApp s)
@@ -932,13 +1020,12 @@ testComics
     -> RIO env ()
 testComics web = do
     setWebTo web
-    getNewReleaseUrl >>= \url -> runWd (navigateToStealth $ render url) *> waitForLoaded url
+    getNewReleaseUrl >>= \url -> runWd (navigateToStealth $ render url) *> waitForLoaded
     runWd getMarkup >>= scrapeComics >>= pPrint . fmap (fmap $ first URL)
 
     void $ currentPage <%= succ
-    getNewReleaseUrl >>= \url -> runWd (navigateToStealth $ render url) *> waitForLoaded url
+    getNewReleaseUrl >>= \url -> runWd (navigateToStealth $ render url) *> waitForLoaded
     runWd getMarkup >>= scrapeComics >>= pPrint . fmap (fmap $ first URL)
-
 
 testChapter
     :: forall env s
@@ -947,11 +1034,12 @@ testChapter
     -> RIO env ()
 testChapter web = do
     setWebTo web
-    getNewReleaseUrl >>= \url -> runWd (navigateToStealth $ render url) *> waitForLoaded url
+    getNewReleaseUrl >>= \url -> runWd (navigateToStealth $ render url) *> waitForLoaded
     runWd getMarkup >>= scrapeComics >>= (take 1 >>> traverse_ doTest)
-    where
-        doTest (Left _) = return ()
-        doTest (Right (url, _)) = do
-            runWd $ navigateToStealth $ render url
-            waitForLoaded url
-            runWd getMarkup >>= scrapeRelInfos >>= pPrint . fmap (fmap $ fmap URL)
+  where
+    doTest (Left _) = return ()
+    doTest (Right (url, _)) = do
+        runWd $ navigateToStealth $ render url
+        waitForLoaded
+        runWd getMarkup >>= scrapeRelInfos >>= pPrint . fmap (fmap $ fmap URL)
+--}

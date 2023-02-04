@@ -17,7 +17,7 @@ import qualified Text.Megaparsec as MP (try)
 import Text.Megaparsec.Char.Lexer (decimal)
 
 
---
+---
 timestamp :: IsString s => s
 timestamp = __TIMESTAMP__
 
@@ -81,8 +81,6 @@ modeScanWebs =
                     [ WeLoMaArt
                     , WeLoveMangaOne
                     , KlMangaNet
-                    , HachiMangaCom
-                    , J8JpCom
                     ]
                 <> help
                     ( "Scan specified webs (default mode), such as 1-3,5,7-9 "

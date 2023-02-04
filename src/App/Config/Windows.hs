@@ -11,9 +11,7 @@ module App.Config.Windows where
 import Path (
     Abs,
     Dir,
-#if __GLASGOW_HASKELL__ < 900
     File,
-#endif
     Path,
     absdir,
     absfile,
@@ -40,6 +38,13 @@ chromeExe =
     fromString $
         fromAbsFile
             [absfile|C:\Program Files\Google\Chrome\Application\chrome.exe|]
+
+
+chromeDriverExe :: FilePath
+chromeDriverExe =
+    fromString $
+        fromAbsFile
+            [absfile|C:\ProgramData\chocolatey\bin\chromedriver|]
 
 #else
 #endif

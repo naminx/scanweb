@@ -35,62 +35,81 @@ queryWebTable sqlBackend = do
                 , webs.username
                 , webs.password
                 , webs.sentinel
-                , webs.comics
-                , webs.latest
-                , webs.chapters
-                , webs.images
+                , webs.genUrl
+                , webs.isLoaded
+                , webs.scrapeComics
+                , webs.scrapeLatest
+                , webs.scrapeChapters
+                , webs.scrapeImages
                 )
     webs <- L.foldl tryParseRow (return []) rows
     return $ Map.fromList webs
-    where
-        tryParseRow
-            :: (MonadUnliftIO m, MonadThrow m)
-            => m [(Web, WebInfo)]
-            -> ( Value Web
-               , Value Domain
-               , Value (Maybe (RText 'Username))
-               , Value (Maybe (RText 'Password))
-               , Value URI
-               , Value Text
-               , Value Text
-               , Value Text
-               , Value Text
-               )
-            -> m [(Web, WebInfo)]
-        tryParseRow acc args = do
-            result <- tryAny $ parseRow args
-            case result of
-                Right row -> acc <&> (<> [row])
-                Left someException -> do
-                    runSimpleApp . logError . display $
-                        vivid Red <> T.pack (displayException someException)
-                    acc
+  where
+    tryParseRow
+        :: (MonadUnliftIO m, MonadThrow m)
+        => m [(Web, WebInfo)]
+        -> ( Value Web
+           , Value Domain
+           , Value (Maybe (RText 'Username))
+           , Value (Maybe (RText 'Password))
+           , Value URI
+           , Value Text
+           , Value Text
+           , Value Text
+           , Value Text
+           , Value Text
+           , Value Text
+           )
+        -> m [(Web, WebInfo)]
+    tryParseRow acc args = do
+        result <- tryAny $ parseRow args
+        case result of
+            Right row -> acc <&> (<> [row])
+            Left someException -> do
+                runSimpleApp . logError . display $
+                    vivid Red <> T.pack (displayException someException)
+                acc
 
-        parseRow
-            :: MonadThrow m
-            => ( Value Web
-               , Value Domain
-               , Value (Maybe (RText 'Username))
-               , Value (Maybe (RText 'Password))
-               , Value URI
-               , Value Text
-               , Value Text
-               , Value Text
-               , Value Text
-               )
-            -> m (Web, WebInfo)
-        parseRow (web, domain, user, pwd, path, comics, latest, chapters, images) = do
+    parseRow
+        :: MonadThrow m
+        => ( Value Web
+           , Value Domain
+           , Value (Maybe (RText 'Username))
+           , Value (Maybe (RText 'Password))
+           , Value URI
+           , Value Text
+           , Value Text
+           , Value Text
+           , Value Text
+           , Value Text
+           , Value Text
+           )
+        -> m (Web, WebInfo)
+    parseRow
+        ( web
+            , domain
+            , user
+            , pwd
+            , path
+            , genUrlVal
+            , isLoadedVal
+            , scrapeComicsVal
+            , scrapeLatestVal
+            , scrapeChaptersVal
+            , scrapeImagesVal
+            ) = do
             return
                 ( unValue web
-                ,
-                    ( unValue domain
-                    , UserInfo <$> unValue user ?? unValue pwd
-                    , unValue path
-                    , unValue comics
-                    , unValue latest
-                    , unValue chapters
-                    , unValue images
-                    )
+                , emptyWebInfo
+                    & webDomain .~ unValue domain
+                    & userInfo .~ (UserInfo <$> unValue user ?? unValue pwd)
+                    & sentinel .~ unValue path
+                    & genUrl .~ unValue genUrlVal
+                    & isLoaded .~ unValue isLoadedVal
+                    & scrapeComics .~ unValue scrapeComicsVal
+                    & scrapeLatest .~ unValue scrapeLatestVal
+                    & scrapeChapters .~ unValue scrapeChaptersVal
+                    & scrapeImages .~ unValue scrapeImagesVal
                 )
 
 
@@ -105,35 +124,35 @@ queryComicTable sqlBackend = do
             pure (comics.comic, comics.title, comics.folder, comics.volume, comics.chapter)
     comics <- L.foldl tryParseRow (return []) rows
     return $ Map.fromList comics
-    where
-        tryParseRow
-            :: (MonadUnliftIO m, MonadThrow m)
-            => m [(Comic, (Title, Path Rel Dir, Volume, Chapter))]
-            -> (Value Comic, Value Title, Value (Path Rel Dir), Value Volume, Value Chapter)
-            -> m [(Comic, (Title, Path Rel Dir, Volume, Chapter))]
-        tryParseRow acc args = do
-            result <- tryAny $ parseRow args
-            case result of
-                Right row -> acc <&> (<> [row])
-                Left someException -> do
-                    runSimpleApp . logError . display $
-                        vivid Red <> T.pack (displayException someException)
-                    acc
+  where
+    tryParseRow
+        :: (MonadUnliftIO m, MonadThrow m)
+        => m [(Comic, (Title, Path Rel Dir, Volume, Chapter))]
+        -> (Value Comic, Value Title, Value (Path Rel Dir), Value Volume, Value Chapter)
+        -> m [(Comic, (Title, Path Rel Dir, Volume, Chapter))]
+    tryParseRow acc args = do
+        result <- tryAny $ parseRow args
+        case result of
+            Right row -> acc <&> (<> [row])
+            Left someException -> do
+                runSimpleApp . logError . display $
+                    vivid Red <> T.pack (displayException someException)
+                acc
 
-        parseRow
-            :: MonadThrow m
-            => (Value Comic, Value Title, Value (Path Rel Dir), Value Volume, Value Chapter)
-            -> m (Comic, (Title, Path Rel Dir, Volume, Chapter))
-        parseRow (comic, title, folder, volume, chapter) = do
-            return
-                ( unValue comic
-                ,
-                    ( unValue title
-                    , unValue folder
-                    , unValue volume
-                    , unValue chapter
-                    )
+    parseRow
+        :: MonadThrow m
+        => (Value Comic, Value Title, Value (Path Rel Dir), Value Volume, Value Chapter)
+        -> m (Comic, (Title, Path Rel Dir, Volume, Chapter))
+    parseRow (comic, title, folder, volume, chapter) = do
+        return
+            ( unValue comic
+            ,
+                ( unValue title
+                , unValue folder
+                , unValue volume
+                , unValue chapter
                 )
+            )
 
 
 queryUrlTable :: (MonadUnliftIO m, MonadThrow m) => SqlBackend -> m UrlTable
@@ -147,24 +166,24 @@ queryUrlTable sqlBackend = do
             pure (urls.web, urls.comic, webs.domain, urls.path)
     urls <- L.foldl tryParseRow (return []) rows
     return $ Map.fromList urls
-    where
-        tryParseRow
-            :: (MonadUnliftIO m, MonadThrow m)
-            => m [(URI, (Web, Comic))]
-            -> (Value Web, Value Comic, Value Domain, Value URI)
-            -> m [(URI, (Web, Comic))]
-        tryParseRow acc args = do
-            result <- tryAny $ parseRow args
-            case result of
-                Right row -> acc <&> (<> [row])
-                Left someException -> do
-                    runSimpleApp . logError . display $
-                        vivid Red <> T.pack (displayException someException)
-                    acc
+  where
+    tryParseRow
+        :: (MonadUnliftIO m, MonadThrow m)
+        => m [(URI, (Web, Comic))]
+        -> (Value Web, Value Comic, Value Domain, Value URI)
+        -> m [(URI, (Web, Comic))]
+    tryParseRow acc args = do
+        result <- tryAny $ parseRow args
+        case result of
+            Right row -> acc <&> (<> [row])
+            Left someException -> do
+                runSimpleApp . logError . display $
+                    vivid Red <> T.pack (displayException someException)
+                acc
 
-        parseRow
-            :: MonadThrow m
-            => (Value Web, Value Comic, Value Domain, Value URI)
-            -> m (URI, (Web, Comic))
-        parseRow (web, comic, domain, path) = do
-            return (https (unValue domain) (unValue path), (unValue web, unValue comic))
+    parseRow
+        :: MonadThrow m
+        => (Value Web, Value Comic, Value Domain, Value URI)
+        -> m (URI, (Web, Comic))
+    parseRow (web, comic, domain, path) = do
+        return (https (unValue domain) (unValue path), (unValue web, unValue comic))
