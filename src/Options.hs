@@ -15,6 +15,7 @@ import RIO.Text (pack)
 import Text.Megaparsec (sepBy, single)
 import qualified Text.Megaparsec as MP (try)
 import Text.Megaparsec.Char.Lexer (decimal)
+import Text.URI (mkURI)
 
 
 ---
@@ -51,6 +52,7 @@ parseOptions = do
                 <*> ( modeScanWebs
                         <|> modeUpdateComic
                         <|> modeDownloadRelease
+                        <|> modeDownloadAddress
                         <|> modeListWebs
                         <|> modeListComics
                         <|> modeFallback
@@ -120,6 +122,18 @@ modeDownloadRelease =
             )
 
 
+modeDownloadAddress :: Parser AppMode
+modeDownloadAddress =
+    DownloadAddress
+        <$> option
+            (eitherReader (left displayException . mkURI . pack))
+            ( short 'a'
+                <> long "address"
+                <> metavar "URI"
+                <> help "Download VOLUME/CHAPTER at a specific address"
+            )
+
+
 mkTupleWebComicMaybeRelInfo :: Text -> Either SomeException (Web, Comic, Maybe ReleaseInfo)
 mkTupleWebComicMaybeRelInfo = parseEither $ do
     _ <- optional (single ' ')
@@ -142,21 +156,21 @@ mkTupleWebComicRelInfo = parseEither $ do
 
 releaseInfo :: TextParser ReleaseInfo
 releaseInfo = MP.try episodes <|> MP.try episode <|> book
-    where
-        book = do
-            _ <- single ':'
-            Book . Volume <$> decimal
-        episode = do
-            _ <- single ':'
-            _ <- single ':'
-            Episode <$> comicChapter
-        episodes = do
-            _ <- single ':'
-            _ <- single ':'
-            chapterBegin <- comicChapter
-            _ <- single '-'
-            chapterEnd <- comicChapter
-            return $ Episodes (chapterBegin, chapterEnd)
+  where
+    book = do
+        _ <- single ':'
+        Book . Volume <$> decimal
+    episode = do
+        _ <- single ':'
+        _ <- single ':'
+        Episode <$> comicChapter
+    episodes = do
+        _ <- single ':'
+        _ <- single ':'
+        chapterBegin <- comicChapter
+        _ <- single '-'
+        chapterEnd <- comicChapter
+        return $ Episodes (chapterBegin, chapterEnd)
 
 
 modeListWebs :: Parser AppMode

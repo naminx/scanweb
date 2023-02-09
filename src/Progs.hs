@@ -4,6 +4,7 @@
 
 module Progs where
 
+import App.Exceptions
 import App.Types
 import Control.Lens hiding (elements)
 import Formatting (format)
@@ -18,7 +19,7 @@ import qualified RIO.Text.Lazy as TL (toStrict)
 import Run
 import System.Console.ANSI (Color (..))
 import Text.Pretty.Simple (pPrint)
-import Text.URI (unRText)
+import Text.URI (renderStr, unRText)
 
 
 -- This function is here only to suppress warnings.
@@ -70,6 +71,20 @@ progDownloadRelease (web, comic, relInfo) = do
     setWebTo web
     setComicTo comic
     result <- tryAny $ openAndDownloadRelease relInfo
+    case result of
+        Left someException -> printException someException
+        Right _ -> return ()
+
+
+progDownloadChapter
+    :: forall env s
+     . (HasStateRef s env, HasApp s, HasLogFunc s, HasProcessContext s)
+    => URI
+    -> RIO env ()
+progDownloadChapter url = do
+    web <- urlToWeb url >>= maybe (throwM $ UnknownWeb $ renderStr url) return
+    setWebTo web
+    result <- tryAny $ openAndDownloadAddress url
     case result of
         Left someException -> printException someException
         Right _ -> return ()

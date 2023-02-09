@@ -8,7 +8,6 @@ module Lib (
     module Lib.MIME,
     module Lib.Megaparsec,
     module Lib.RIO,
-    module Lib.Taggy,
     module Lib.URI,
     module Lib.WebDriver,
 ) where
@@ -20,7 +19,6 @@ import Lib.Lens
 import Lib.MIME
 import Lib.Megaparsec
 import Lib.RIO
-import Lib.Taggy
 import Lib.URI
 import Lib.WebDriver hiding (stdin, stdout)
 

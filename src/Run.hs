@@ -59,6 +59,7 @@ import Path (
     Rel,
     SomeBase (..),
     addExtension,
+    parseAbsFile,
     parseRelDir,
     parseRelFile,
     reldir,
@@ -78,7 +79,7 @@ import qualified RIO.Text.Lazy as TL (
     unpack,
  )
 import System.Console.ANSI (Color (..))
-import System.Directory (createDirectory)
+import System.Directory (createDirectory, makeAbsolute)
 import System.Random (randomRIO)
 import System.Time.Extra (Seconds, sleep)
 import Text.Megaparsec.Char.Lexer (decimal)
@@ -88,6 +89,7 @@ import Text.RawString.QQ (r)
 import Text.URI (
     URI,
     emptyURI,
+    mkURI,
     relativeTo,
     render,
     renderBs,
@@ -103,7 +105,6 @@ import Text.URI.Lens (
     uriScheme,
  )
 import Web.Api.WebDriver hiding (Page)
-import Web.Common (tryParseChapter, tryParseURI)
 
 
 set_
@@ -213,34 +214,63 @@ updateNewReleases = do
                 vivid Blue
                     <> unRText domain
                     <> (vivid Black <> " [" <> T.pack (show page) <> "]")
-            comicListScript <- currentWebInfo . genUrl <%= id
-            newReleaseUrl <- runWd $ executeScript comicListScript [toJSON page]
-            runWd $
-                navigateToStealth $
-                    "https://" <> unRText domain <> (newReleaseUrl ^?! _String)
-            waitForLoaded
-            waitTime <- getRandomWaitTime
-            liftIO $ sleep waitTime
-            scrapeComicsScript <- currentWebInfo . scrapeComics <%= id
-            newReleases <-
-                runWd (executeScript scrapeComicsScript [])
-                    <&> ( view _Array
-                            >>> toList
-                            >>> fmap (liftA2 (,) . js2URI <*> js2MaybeRelInfo)
-                        )
-            when (null newReleases) $ throwM ComicLinksNotFound
-            webSentinel <- currentWebInfo . sentinel <%= id
-            let hit = elemOf (folded . _Right . _1) webSentinel newReleases
-            if hit
-                then
-                    traverse tryClickAndDownloadComic $
-                        takeWhile (urlNotMatch webSentinel) newReleases
-                else do
-                    result <- traverse tryClickAndDownloadComic newReleases
-                    currentPage %= succ
-                    (result <>) <$> updateNewReleases
+            genUrlScript <- currentWebInfo . genUrl <%= id
+            pageNUrlVal <- runWd $ executeScript genUrlScript [toJSON page]
+            case pageNUrlVal ^.. _String >>= mkURI of
+                [] -> throwM ComicLinksNotFound
+                pageNUrl : _ -> do
+                    runWd $ navigateToStealth $ render $ https domain pageNUrl
+                    waitForLoaded
+                    waitTime <- getRandomWaitTime
+                    liftIO $ sleep waitTime
+                    scrapeComicsScript <- currentWebInfo . scrapeComics <%= id
+                    newReleases <-
+                        runWd (executeScript scrapeComicsScript [])
+                            <&> ( view _Array
+                                    >>> toList
+                                    >>> fmap
+                                        ( liftA2 (,) . js2URI
+                                            <*> js2MaybeRelInfo
+                                        )
+                                )
+                    when (null newReleases) $ throwM ComicLinksNotFound
+                    webSentinel <- currentWebInfo . sentinel <%= id
+                    let hit =
+                            elemOf
+                                (folded . _Right . _1)
+                                webSentinel
+                                newReleases
+                    if hit
+                        then
+                            traverse tryClickAndDownloadComic $
+                                takeWhile
+                                    (urlNotMatch webSentinel)
+                                    newReleases
+                        else do
+                            result <-
+                                traverse
+                                    tryClickAndDownloadComic
+                                    newReleases
+                            currentPage %= succ
+                            (result <>) <$> updateNewReleases
   where
     urlNotMatch = (preview (_Right . _1) >>>) . (/=) . Just
+
+
+tryParseChapter
+    :: (Text -> Try Chapter) -> ToLike (Maybe Text) (Try Chapter)
+tryParseChapter mkChapterNo =
+    to $ maybeToTry ChapterNoNotFound >>> (>>= mkChapterNo)
+
+
+tryParseRelInfo
+    :: (Text -> Try ReleaseInfo) -> ToLike (Maybe Text) (Try ReleaseInfo)
+tryParseRelInfo mkRelInfo =
+    to $ maybeToTry ChapterNoNotFound >>> (>>= mkRelInfo)
+
+
+tryParseURI :: ToLike (Maybe Text) (Try URI)
+tryParseURI = to $ maybeToTry ChapterLinksNotFound >>> (>>= mkURI)
 
 
 js2URI :: Value -> Try URI
@@ -451,7 +481,6 @@ openAndScanComic = do
     comicUrl <- currentComicUrl <%= id
     runWd $ navigateToStealth $ render comicUrl
     waitForLoaded
-    -- markup <- runWd getMarkup
     maybeRelInfo <- newReleaseInfo <%= id
     scrapeLatestScript <- currentWebInfo . scrapeLatest <%= id
     latestChapUrl <-
@@ -536,6 +565,37 @@ openAndDownloadRelease relInfo = do
             (folded . filtered (preview (_Right . _1) >>> (== Just chap)))
 
 
+openAndDownloadAddress
+    :: forall env s
+     . (HasStateRef s env, HasApp s, HasLogFunc s, HasProcessContext s)
+    => URI
+    -> RIO env ()
+openAndDownloadAddress chapUrl = do
+    runWd $ navigateToStealth $ render chapUrl
+    waitForLoaded
+    scrapeImagesScript <- currentWebInfo . scrapeImages <%= id
+    images <-
+        runWd (executeScript scrapeImagesScript [])
+            <&> (view _Array >>> toList >>> fmap (view _String >>> mkURI))
+    runningFileName <-
+        traverse
+            (fmap parseAbsFile . (liftIO . makeAbsolute) . (TL.unpack . format (lpadded 3 '0' int)))
+            [1 .. length images]
+            <&> toListOf (folded . _Right)
+    bracketDownloadRelease $
+        bracketDownloadImages $
+            traverse_ tryDownloadImage $
+                zip images runningFileName
+  where
+    bracketDownloadRelease = bracket_ printDownloadingChapter printNewLine
+    printDownloadingChapter = logSticky =<< stickyLine <.= ""
+    printNewLine = logStickyDone =<< stickyLine <%= id
+    bracketDownloadImages =
+        bracket_
+            (logSticky =<< stickyLine <<>= vivid Black <> " [")
+            (logSticky =<< stickyLine <<>= vivid Black <> "]")
+
+
 -- Returns `Just` the last chapter successfully downloaded.
 -- Returns `Nothing` if the comic is up to date.
 -- May throw `SomeChaptersNotDownloaded`
@@ -560,10 +620,8 @@ clickAndScanComic = do
     newWin <- execNewWin (clickAnchorTargetBlank comicUrl) []
     runWd $ switchToWindow newWin
     waitForLoaded
-    -- markup <- runWd getMarkup
     maybeRelInfo <- newReleaseInfo <%= id
     scrapeLatestScript <- currentWebInfo . scrapeLatest <%= id
-    -- latestChapUrl <- scrapeLatestRelInfo markup
     latestChapUrl <-
         runWd (executeScript scrapeLatestScript [])
             <&> preview (_String . to Just . tryParseURI)

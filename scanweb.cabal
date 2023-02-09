@@ -57,7 +57,6 @@ executable scanweb
       Lib.Megaparsec
       Lib.MIME
       Lib.RIO
-      Lib.Taggy
       Lib.URI
       Lib.WebDriver
       Options
@@ -107,7 +106,6 @@ executable scanweb
     , rio-orphans
     , scientific
     , script-monad
-    , taggy-lens
     , text
     , transformers-base
     , webdriver-w3c

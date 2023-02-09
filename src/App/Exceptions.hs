@@ -32,6 +32,15 @@ instance Exception InvalidWebNo where
         "Invalid web number: " <> show webNo
 
 
+newtype UnknownWeb = UnknownWeb String
+    deriving (Eq, Show)
+
+
+instance Exception UnknownWeb where
+    displayException (UnknownWeb web) =
+        "Unknown web: " <> web
+
+
 newtype LookupWebFailed = LookupWebFailed Web
     deriving (Eq, Show)
 

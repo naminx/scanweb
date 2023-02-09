@@ -15,6 +15,7 @@
             all-cabal-hashes = inputs.all-cabal-hashes;
           })];
           config = {
+            allowBroken = true;
             allowUnfree = true;
           };
         };
@@ -30,7 +31,6 @@
               google-chrome
               lambdabot
               neovim
-              ormolu
               zlib;
             inherit (hp)
               implicit-hie

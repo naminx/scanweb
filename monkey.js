@@ -22,6 +22,7 @@
 // @match        https://syosetu.me/chapters/*
 // @match        https://weloma.art/*
 // @match        https://welovemanga.one/*
+// @match        https://www.mangago.me/read-manga/*
 // @icon         https://manga1001.in/favicon.ico
 // @grant        GM.xmlHttpRequest
 // @connect      asia-s10.bunnycdn.org
@@ -45,6 +46,7 @@
 // @connect      mm2r.net
 // @connect      rawdevart.com
 // @connect      welovekai.com
+// @connect      iweb13.mangapicgallery.com
 
 // ==/UserScript==
 

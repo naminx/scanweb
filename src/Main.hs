@@ -18,6 +18,7 @@ import Control.Monad.Extra (whileM)
 import Control.Monad.Logger
 import Control.Monad.Trans.Resource
 import Data.Aeson.Lens
+import Data.Maybe (fromJust)
 import qualified Data.Text.IO as T
 import qualified Data.Text.Lazy.IO as TL
 import Data.Tuple.Extra (dupe)
@@ -34,10 +35,10 @@ import RIO.State
 import qualified RIO.Text as T
 import qualified RIO.Text.Lazy as TL
 import Replace.Megaparsec (anyTill, breakCap)
-import Run (downloadImageAux, runWdSession, xmlHttpRequest)
+import Run (downloadImageAux, runWdSession, waitUntil)
 import System.Console.ANSI (SGR (..), setSGR)
 import System.Console.ANSI.Types (Color (..))
-import System.Directory (getCurrentDirectory)
+import System.Directory (getCurrentDirectory, makeAbsolute)
 import System.Process (CreateProcess (..), StdStream (..), withCreateProcess)
 import qualified System.Process as P
 import System.Time.Extra (sleep)
@@ -54,23 +55,11 @@ import Text.Megaparsec.Char (space1, string)
 import Text.Pretty.Simple (pPrint)
 import Text.Printf
 import Text.RawString.QQ (r)
-import Text.Taggy.Lens
 import Text.URI (Authority (Authority), mkURI, render, unRText)
 import Text.URI.Lens (authHost, uriAuthority)
 import Text.URI.QQ (host, uri)
 import Web.Api.WebDriver as WD
 import qualified Prelude
-
-
--- This function is here only to suppress warnings.
-_dummy :: Void
-_dummy =
-    undefined
-        Data.Tuple.Extra.dupe
-        ("" ^.. Text.Taggy.Lens.html)
-        (pPrint (0 :: Int) :: IO ())
-        [uri||]
-        xmlHttpRequest
 
 
 main :: IO ()
@@ -139,6 +128,8 @@ getProg appmode = case appmode of
     UpdateComic (web, comic, relInfo) -> progUpdateComic (web, comic, relInfo)
     DownloadRelease (web, comic, relInfo) ->
         progDownloadRelease (web, comic, relInfo)
+    DownloadAddress url ->
+        progDownloadChapter url
     ListWebs -> progListWebs
     ListComics -> progListComics
 
@@ -186,7 +177,7 @@ queryComic c =
         (unValue title, unValue path, unValue volume, unValue chapter)
 
 
-queryWeb :: MonadUnliftIO m => URI -> m (Maybe Web)
+queryWeb :: MonadUnliftIO m => URI -> m (Maybe Webs)
 queryWeb url =
     bracket (newSqlBackend defaultDbFile) (liftIO . close') $
         (fmap unValues . preview _head <$>) . runSqlConn query
@@ -194,5 +185,60 @@ queryWeb url =
     query = select $ do
         webs <- from $ table @Webs
         where_ $ webs.domain ==. val (url ^?! domain)
-        pure webs.web
-    unValues = unValue
+        pure
+            ( webs.web
+            , webs.domain
+            , webs.username
+            , webs.password
+            , webs.sentinel
+            , webs.genUrl
+            , webs.isLoaded
+            , webs.scrapeComics
+            , webs.scrapeLatest
+            , webs.scrapeChapters
+            , webs.scrapeImages
+            )
+    unValues
+        :: ( Value Web
+           , Value Domain
+           , Value (Maybe (RText 'Username))
+           , Value (Maybe (RText 'Password))
+           , Value URI
+           , Value Text
+           , Value Text
+           , Value Text
+           , Value Text
+           , Value Text
+           , Value Text
+           )
+        -> Webs
+    unValues (w, d, u, p, a, t1, t2, t3, t4, t5, t6) =
+        Webs
+            (unValue w)
+            (unValue d)
+            (unValue u)
+            (unValue p)
+            (unValue a)
+            (unValue t1)
+            (unValue t2)
+            (unValue t3)
+            (unValue t4)
+            (unValue t5)
+            (unValue t6)
+
+
+downloadUrl :: URI -> IO ()
+downloadUrl url = do
+    sess <- newWdSession
+    Just webinfo <- queryWeb url
+    runWdSession sess $ navigateToStealth $ render url
+    runWdSession sess $ waitUntil webinfo.websIsLoaded $ round $ minWaitTime * 1000
+    images <-
+        runWdSession sess (executeScript webinfo.websScrapeImages [])
+            <&> (view _Array >>> toList >>> fmap (view _String >>> mkURI >>> fromJust))
+    traverse_ (>>= downloadImageAux sess) $ zipWith combine images [1 ..]
+    void $ runWdSession sess closeWindow
+  where
+    combine :: URI -> Int -> IO (URI, Path Abs File)
+    combine u n = (,) u <$> nToFile n
+    nToFile n = fromJust . parseAbsFile <$> makeAbsolute (printf "%03d" n)
