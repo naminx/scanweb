@@ -225,20 +225,3 @@ queryWeb url =
             (unValue t4)
             (unValue t5)
             (unValue t6)
-
-
-downloadUrl :: URI -> IO ()
-downloadUrl url = do
-    sess <- newWdSession
-    Just webinfo <- queryWeb url
-    runWdSession sess $ navigateToStealth $ render url
-    runWdSession sess $ waitUntil webinfo.websIsLoaded $ round $ minWaitTime * 1000
-    images <-
-        runWdSession sess (executeScript webinfo.websScrapeImages [])
-            <&> (view _Array >>> toList >>> fmap (view _String >>> mkURI >>> fromJust))
-    traverse_ (>>= downloadImageAux sess) $ zipWith combine images [1 ..]
-    void $ runWdSession sess closeWindow
-  where
-    combine :: URI -> Int -> IO (URI, Path Abs File)
-    combine u n = (,) u <$> nToFile n
-    nToFile n = fromJust . parseAbsFile <$> makeAbsolute (printf "%03d" n)
