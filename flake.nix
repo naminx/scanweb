@@ -8,6 +8,7 @@
     flake-parts.lib.mkFlake { inherit inputs; } {
       systems = nixpkgs.lib.systems.flakeExposed;
       imports = [ inputs.haskell-flake.flakeModule ];
+      # perSystem = { self', pkgs, ... }: {
       perSystem = { config, self', inputs', pkgs, system, ... }: {
         _module.args.pkgs = import nixpkgs {
           inherit system;
@@ -15,35 +16,33 @@
             all-cabal-hashes = inputs.all-cabal-hashes;
           })];
           config = {
+            # for script-monad & wedriver-w3c
             allowBroken = true;
+            # for google-chrome
             allowUnfree = true;
           };
         };
         haskellProjects.default = {
-          haskellPackages = pkgs.haskell.packages.ghc944;
-          # packages = {
-          #   You can add more than one local package here.
-          #   my-package.root = ./.;  # Assumes ./my-package.cabal
-          # };
-          buildTools = hp: {
-            inherit (pkgs)
-              chromedriver
-              google-chrome
-              lambdabot
-              neovim
-              zlib;
-            inherit (hp)
-              implicit-hie
-              fourmolu;
-          };
+          # packages.example.root = ./.;  # This value is detected based on .cabal files
           overrides = self: super: with pkgs.haskell.lib; {
-            ghcid = dontCheck super.ghcid;
+            script-monad = dontCheck super.script-monad;
+            webdriver-w3c = dontCheck super.webdriver-w3c;
           };
-          # hlintCheck.enable = true;
-          # hlsCheck.enable = true;
+          devShell = {
+            enable = true;  # Enabled by default
+            tools = hp: {
+              inherit (pkgs)
+                chromedriver
+                google-chrome
+                lambdabot;
+              inherit (hp)
+                fourmolu;
+            };
+            #  hlsCheck.enable = true;
+          };
         };
         # haskell-flake doesn't set the default package, but you can do it here.
-        # packages.default = self'.packages.scanweb;
+        packages.default = self'.packages.example;
       };
     };
 }

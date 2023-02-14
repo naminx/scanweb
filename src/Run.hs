@@ -868,9 +868,9 @@ getRandomWaitTime
     => RIO env Seconds
 getRandomWaitTime = do
     web <- currentWeb <%= id
-    case web of
-        MangaRawIo -> randomRIO (minWaitTime, maxWaitTime)
-        _ -> return defaultWaitTime
+    if web `elem` [mangaRawSo, mangaRawIo, manga1001Su]
+        then randomRIO (minWaitTime, maxWaitTime)
+        else return defaultWaitTime
 
 
 -- Wait some seconds, for a new `WindowHandle` not exist in `[WindowHandle]`

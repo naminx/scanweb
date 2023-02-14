@@ -48,12 +48,20 @@ defaultMaxNumPages :: Int
 defaultMaxNumPages = 40
 
 
+minBoundWeb :: Web
+minBoundWeb = Web 3
+
+
+maxBoundWeb :: Web
+maxBoundWeb = Web 5
+
+
 defaultOptions :: Options
 defaultOptions =
     Options
         { _rootDir = defaultRootDir
         , _dbFile = Abs defaultDbFile
-        , _appMode = ScanWebs [minBound :: Web .. maxBound :: Web]
+        , _appMode = ScanWebs $ Web <$> [unWeb minBoundWeb .. unWeb maxBoundWeb]
         , _maxNumPages = defaultMaxNumPages
         }
 
@@ -62,19 +70,19 @@ chromeConfig :: WebDriverConfig IO
 chromeConfig =
     defaultWebDriverConfig
         & environment .~ appWebDriverEnvironment
-    where
-        appWebDriverEnvironment =
-            defaultWebDriverEnvironment
-                & env .~ appWDEnv
-                & logOptions .~ appWDLogOpts
-        appWDEnv =
-            defaultWDEnv
-                & remoteHostname .~ "localhost"
-                & remotePort .~ 9515
-                & responseFormat .~ SpecFormat
-        appWDLogOpts =
-            defaultWebDriverLogOptions
-                & logSilent .~ True
+  where
+    appWebDriverEnvironment =
+        defaultWebDriverEnvironment
+            & env .~ appWDEnv
+            & logOptions .~ appWDLogOpts
+    appWDEnv =
+        defaultWDEnv
+            & remoteHostname .~ "localhost"
+            & remotePort .~ 9515
+            & responseFormat .~ SpecFormat
+    appWDLogOpts =
+        defaultWebDriverLogOptions
+            & logSilent .~ True
 
 
 normalChrome :: Capabilities

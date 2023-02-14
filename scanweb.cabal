@@ -46,7 +46,6 @@ executable scanweb
       App.Types.Volume
       App.Types.Web
       App.Types.WebInfo
-      Data.WOE
       Import
       Init
       Lib

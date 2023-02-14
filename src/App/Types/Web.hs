@@ -1,14 +1,11 @@
-{-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE DerivingVia #-}
+{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE NoImplicitPrelude #-}
 
 module App.Types.Web where
 
-import Data.Aeson (FromJSON (..), ToJSON (..), Value (..))
-import Data.Aeson.Types (prependFailure, typeMismatch)
-import Data.Scientific (toBoundedInteger)
-import Data.WOE (IsoEnum (..), WOE (..), fromEnumSafely, toEnumSafely)
+import Data.Aeson (FromJSON (..), ToJSON (..))
 import Database.Esqueleto.Experimental (
     PersistField (..),
     PersistFieldSql (..),
@@ -18,106 +15,61 @@ import Database.Esqueleto.Experimental (
 import Lib
 import qualified RIO.Text as T (pack)
 import Web.Internal.HttpApiData (FromHttpApiData (..), ToHttpApiData (..))
-import Web.PathPieces (PathPiece (..), readFromPathPiece, showToPathPiece)
+import Web.PathPieces (PathPiece (..))
 
 
-data Web
-    = MangaRawSo
-    | MangaRawIo
-    | Manga1001Su
-    | WeLoMaArt
-    | WeLoveMangaOne
-    | KlMangaNet
-    | HachiMangaCom
-    | J8JpCom
-    deriving (Bounded, Eq, Generic, Ord, Read, Show)
-    deriving (Enum) via WOE Web
-
-
-instance IsoEnum Web where
-    mapping =
-        [ (0, MangaRawSo)
-        , (1, MangaRawIo)
-        , (2, Manga1001Su)
-        , (3, WeLoMaArt)
-        , (4, WeLoveMangaOne)
-        , (5, KlMangaNet)
-        , (6, HachiMangaCom)
-        , (7, J8JpCom)
-        ]
-
-
-instance Hashable Web
-
-
-instance ToJSON Web where
-    toJSON = Number . fromIntegral . fromMaybe raiseError . fromEnumSafely
-        where
-            raiseError =
-                error $
-                    "internal error:"
-                        <> " missing value in IsoEnum mapping for Web type"
-
-
-instance FromJSON Web where
-    parseJSON (Number n) = case toBoundedInteger n >>= toEnumSafely of
-        Just webNo ->
-            pure webNo
-        Nothing ->
-            fail $
-                "parsing Web failed"
-                    <> (", value out of bound: " <> show n)
-    parseJSON invalid =
-        prependFailure
-            "parsing Web failed, "
-            (typeMismatch "Number" invalid)
-
-
-instance PathPiece Web where
-    toPathPiece = showToPathPiece . fromMaybe raiseError . fromEnumSafely
-        where
-            raiseError =
-                error $
-                    "internal error:"
-                        <> " missing value in IsoEnum mapping for Web type"
-    fromPathPiece = readFromPathPiece >=> toEnumSafely
-
-
-instance ToHttpApiData Web where
-    toUrlPiece = toPathPiece
-
-
-instance FromHttpApiData Web where
-    parseUrlPiece x =
-        parseUrlPiece x >>= maybe leftValue Right . toEnumSafely
-        where
-            leftValue = Left "Web value out of bound"
+newtype Web = Web {unWeb :: Int}
+    deriving (Eq, Ord, Show, Read)
+    deriving newtype
+        ( FromJSON
+        , ToJSON
+        , PathPiece
+        , ToHttpApiData
+        , FromHttpApiData
+        )
 
 
 instance PersistField Web where
-    toPersistValue =
-        PersistInt64
-            . fromIntegral
-            . fromMaybe raiseError
-            . fromEnumSafely
-        where
-            raiseError =
-                error $
-                    "internal error:"
-                        <> " missing value in IsoEnum mapping for Web type"
-    fromPersistValue (PersistInt64 n) =
-        maybe toErrorMsg Right $ toEnumSafely $ fromIntegral n
-        where
-            toErrorMsg =
-                Left $
-                    "converting to Web failed"
-                        <> (", value out of bound: " <> T.pack (show n))
+    toPersistValue (Web n) = PersistInt64 $ fromIntegral n
+    fromPersistValue (PersistInt64 n) = Right $ Web $ fromIntegral n
     fromPersistValue invalid =
         Left $
-            "reading Web failed"
-                <> ", expected PersistInt64"
+            "reading `Web` failed"
+                <> ", expected `PersistInt64`"
                 <> (", received: " <> T.pack (show invalid))
 
 
 instance PersistFieldSql Web where
     sqlType _ = SqlInt64
+
+
+mangaRawSo :: Web
+mangaRawSo = Web 0
+
+
+mangaRawIo :: Web
+mangaRawIo = Web 1
+
+
+manga1001Su :: Web
+manga1001Su = Web 2
+
+
+weLoMaArt :: Web
+weLoMaArt = Web 3
+
+
+weLoveMangaOne :: Web
+weLoveMangaOne = Web 4
+
+
+klMangaNet :: Web
+klMangaNet = Web 5
+
+
+hachiMangaCom :: Web
+hachiMangaCom = Web 6
+
+
+j8JpCom :: Web
+j8JpCom = Web 7

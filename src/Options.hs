@@ -5,9 +5,7 @@
 module Options where
 
 import App.Config
-import App.Exceptions
 import Control.Arrow (left)
-import Data.WOE (toEnumSafely)
 import Import
 import Options.Applicative.Simple
 import Path (SomeBase (Rel), parseAbsDir, parseSomeFile)
@@ -18,7 +16,7 @@ import Text.Megaparsec.Char.Lexer (decimal)
 import Text.URI (mkURI)
 
 
----
+--
 timestamp :: IsString s => s
 timestamp = __TIMESTAMP__
 
@@ -79,11 +77,7 @@ modeScanWebs =
             ( short 's'
                 <> long "scan"
                 <> metavar "WEBs"
-                <> value
-                    [ WeLoMaArt
-                    , WeLoveMangaOne
-                    , KlMangaNet
-                    ]
+                <> value (Web <$> [unWeb minBoundWeb .. unWeb maxBoundWeb])
                 <> help
                     ( "Scan specified webs (default mode), such as 1-3,5,7-9 "
                         <> "(-w for list of known webs)"
@@ -196,17 +190,13 @@ modeListComics =
 modeFallback :: Parser AppMode
 modeFallback =
     flag
-        (ScanWebs [minBound :: Web .. maxBound :: Web])
-        (ScanWebs [minBound :: Web .. maxBound :: Web])
+        (ScanWebs $ Web <$> [unWeb minBoundWeb .. unWeb maxBoundWeb])
+        (ScanWebs $ Web <$> [unWeb minBoundWeb .. unWeb maxBoundWeb])
         mempty
 
 
 singleWeb :: TextParser Web
-singleWeb = do
-    webNo <- decimal
-    case toEnumSafely webNo of
-        Nothing -> fail $ displayException $ InvalidWebNo webNo
-        Just web -> return web
+singleWeb = Web <$> decimal
 
 
 webRange :: TextParser [Web]
@@ -214,7 +204,7 @@ webRange = do
     firstWeb <- singleWeb
     _ <- single '-'
     lastWeb <- singleWeb
-    return [firstWeb .. lastWeb]
+    return $ Web <$> [unWeb firstWeb .. unWeb lastWeb]
 
 
 webList :: TextParser [Web]

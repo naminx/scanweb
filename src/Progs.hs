@@ -96,12 +96,12 @@ progListWebs = do
     printWebs webTab
   where
     printWebs =
-        traverse_ printWeb . sortWith (\(web, _) -> fromEnum web) . Map.toList
+        traverse_ printWeb . sortWith (\(web, _) -> unWeb web) . Map.toList
 
     printWeb (web, wInfo) =
         runSimpleApp . logInfo . display $
             vivid Yellow
-                <> TL.toStrict (format (lpadded 2 ' ' int) $ fromEnum web)
+                <> TL.toStrict (format (lpadded 2 ' ' int) $ unWeb web)
                 <> (resetSGR <> ") ")
                 <> (vivid Green <> unRText (wInfo ^. webDomain))
                 <> resetSGR
