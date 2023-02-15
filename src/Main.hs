@@ -1,6 +1,6 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE OverloadedRecordDot #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE RankNTypes #-}
@@ -8,6 +8,10 @@
 {-# LANGUAGE NoImplicitPrelude #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
+
+#if __GLASSGLOW_HASKELL__ >= 902
+{-# LANGUAGE OverloadedRecordDot #-}
+#endif
 
 module Main where
 
@@ -80,23 +84,23 @@ main = bracket_
                         \_ houtResult _ _ -> case houtResult of
                             Just hout -> do
                                 void $ waitForChromeDriver hout
-                                withAsync (consumeInput hout)
-                                    $ const
-                                    $ bracket
-                                        newWdSession
-                                        (`runWdSession` deleteSession)
-                                    $ \wdSess -> do
-                                        myApp <-
-                                            newSomeRef $
-                                                initApp
-                                                    logFunction
-                                                    procContext
-                                                    cliOptions
-                                                    conn
-                                                    wdSess
-                                        runRIO myApp $ do
-                                            setupEnv
-                                            getProg $ cliOptions ^. appMode
+                                withAsync (consumeInput hout) $
+                                    const $
+                                        bracket
+                                            newWdSession
+                                            (`runWdSession` deleteSession)
+                                            $ \wdSess -> do
+                                                myApp <-
+                                                    newSomeRef $
+                                                        initApp
+                                                            logFunction
+                                                            procContext
+                                                            cliOptions
+                                                            conn
+                                                            wdSess
+                                                runRIO myApp $ do
+                                                    setupEnv
+                                                    getProg $ cliOptions ^. appMode
                             Nothing -> return ()
                     else do
                         myApp <-
@@ -118,11 +122,11 @@ main = bracket_
     consumeInput = forever . T.hGetLine
 
 
-getProg
-    :: forall env s
-     . (HasStateRef s env, HasApp s, HasLogFunc s, HasProcessContext s)
-    => AppMode
-    -> RIO env ()
+getProg ::
+    forall env s.
+    (HasStateRef s env, HasApp s, HasLogFunc s, HasProcessContext s) =>
+    AppMode ->
+    RIO env ()
 getProg appmode = case appmode of
     ScanWebs webs -> progScanWebs webs
     UpdateComic (web, comic, relInfo) -> progUpdateComic (web, comic, relInfo)
@@ -141,14 +145,16 @@ queryComics links =
         (map unValues <$>) . runSqlConn query
   where
     (+||+) = unsafeSqlBinOp " || "
+    infixr 5 +||+
+#if __GLASSGLOW_HASKELL__ >= 902
     query = select $ do
         webs :& urls :& comics <-
-            from
-                $ ( table @Webs `InnerJoin` table @Urls
-                        `on` (\(webs :& urls) -> webs.web ==. urls.web)
-                  )
+            from $
+                ( table @Webs `InnerJoin` table @Urls
+                    `on` (\(webs :& urls) -> webs.web ==. urls.web)
+                )
                     `InnerJoin` table @Comics
-                `on` (\(_ :& urls :& comics) -> urls.comic ==. comics.comic)
+                    `on` (\(_ :& urls :& comics) -> urls.comic ==. comics.comic)
         let fullUrl = val [uri|https://|] +||+ webs.domain +||+ urls.path
         where_ $ fullUrl `in_` valList links
         orderBy $ map (asc . (fullUrl !=.) . val) links
@@ -157,6 +163,24 @@ queryComics links =
             , fullUrl
             , (comics.title, comics.folder, comics.volume, comics.chapter)
             )
+#else
+    query = select $ do
+        webs :& urls :& comics <-
+            from $
+                ( table @Webs `InnerJoin` table @Urls
+                    `on` (\(webs :& urls) -> webs .^ WebsWeb ==. urls .^ UrlsWeb)
+                )
+                    `InnerJoin` table @Comics
+                    `on` (\(_ :& urls :& comics) -> urls .^ UrlsComic ==. comics .^ ComicsComic)
+        let fullUrl = val [uri|https://|] +||+ webs .^ WebsDomain +||+ urls .^ UrlsPath
+        where_ $ fullUrl `in_` valList links
+        orderBy $ map (asc . (fullUrl !=.) . val) links
+        pure
+            ( urls .^ UrlsComic
+            , fullUrl
+            , (comics .^ ComicsTitle, comics .^ ComicsFolder, comics .^ ComicsVolume, comics .^ ComicsChapter)
+            )
+#endif
     unValues (comic, uri_, comicInfo) =
         (unValue comic, unValue uri_, unValues' comicInfo)
       where
@@ -169,10 +193,17 @@ queryComic c =
     bracket (newSqlBackend defaultDbFile) (liftIO . close') $
         (fmap unValues . preview _head <$>) . runSqlConn query
   where
+#if __GLASSGLOW_HASKELL__ >= 902
     query = select $ do
         comics <- from $ table @Comics
         where_ $ comics.comic ==. val (Comic c)
         pure (comics.title, comics.folder, comics.volume, comics.chapter)
+#else
+    query = select $ do
+        comics <- from $ table @Comics
+        where_ $ comics .^ ComicsComic ==. val (Comic c)
+        pure (comics .^ ComicsTitle, comics .^ ComicsFolder, comics .^ ComicsVolume, comics .^ ComicsChapter)
+#endif
     unValues (title, path, volume, chapter) =
         (unValue title, unValue path, unValue volume, unValue chapter)
 
@@ -182,6 +213,7 @@ queryWeb url =
     bracket (newSqlBackend defaultDbFile) (liftIO . close') $
         (fmap unValues . preview _head <$>) . runSqlConn query
   where
+#if __GLASSGLOW_HASKELL__ >= 902
     query = select $ do
         webs <- from $ table @Webs
         where_ $ webs.domain ==. val (url ^?! domain)
@@ -198,20 +230,38 @@ queryWeb url =
             , webs.scrapeChapters
             , webs.scrapeImages
             )
-    unValues
-        :: ( Value Web
-           , Value Domain
-           , Value (Maybe (RText 'Username))
-           , Value (Maybe (RText 'Password))
-           , Value URI
-           , Value Text
-           , Value Text
-           , Value Text
-           , Value Text
-           , Value Text
-           , Value Text
-           )
-        -> Webs
+#else
+    query = select $ do
+        webs <- from $ table @Webs
+        where_ $ webs .^ WebsDomain ==. val (url ^?! domain)
+        pure
+            ( webs .^ WebsWeb
+            , webs .^ WebsDomain
+            , webs .^ WebsUsername
+            , webs .^ WebsPassword
+            , webs .^ WebsSentinel
+            , webs .^ WebsGenUrl
+            , webs .^ WebsIsLoaded
+            , webs .^ WebsScrapeComics
+            , webs .^ WebsScrapeLatest
+            , webs .^ WebsScrapeChapters
+            , webs .^ WebsScrapeImages
+            )
+#endif
+    unValues ::
+        ( Value Web
+        , Value Domain
+        , Value (Maybe (RText 'Username))
+        , Value (Maybe (RText 'Password))
+        , Value URI
+        , Value Text
+        , Value Text
+        , Value Text
+        , Value Text
+        , Value Text
+        , Value Text
+        ) ->
+        Webs
     unValues (w, d, u, p, a, t1, t2, t3, t4, t5, t6) =
         Webs
             (unValue w)

@@ -10,7 +10,6 @@ module App.Config (
     defaultRootDir,
 ) where
 
-
 #if defined(mingw32_HOST_OS)
 import App.Config.Windows
 #else
@@ -98,6 +97,9 @@ normalChromeOptions =
         & chromeArgs
             ?~ [ "--user-data-dir=" <> userDataDir
                , "--save-page-as-mhtml"
+#if __GLASSGLOW_HASKELL__ < 902
+               , "--no-sandbox"
+#endif
                ]
 
 
