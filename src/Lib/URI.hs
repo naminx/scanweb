@@ -4,9 +4,16 @@
 
 module Lib.URI where
 
-import Control.Lens (Traversal', set, (.~), (?~), _Right)
+import Control.Lens (Choice, Traversal', prism', set, (.~), (?~), _Right)
 import RIO hiding (set, (.~))
-import Text.URI (Authority (Authority), RText, RTextLabel (Host), URI)
+import Text.URI (
+    Authority (Authority),
+    RText,
+    RTextLabel (Host),
+    URI,
+    mkURI,
+    render,
+ )
 import Text.URI.Lens (authHost, uriAuthority, uriScheme)
 import Text.URI.QQ (scheme)
 
@@ -31,3 +38,7 @@ absPath = set uriScheme Nothing . set uriAuthority (Left True)
 
 relPath :: URI -> URI
 relPath = set uriScheme Nothing . set uriAuthority (Left False)
+
+
+toURI :: (Choice p, Applicative f) => p URI (f URI) -> p Text (f Text)
+toURI = prism' render mkURI

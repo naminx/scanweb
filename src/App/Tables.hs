@@ -3,7 +3,7 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE NoImplicitPrelude #-}
 
-#if __GLASSGLOW_HASKELL__ >= 902
+#if MIN_VERSION_GLASGOW_HASKELL(9,2,0,0)
 {-# LANGUAGE OverloadedRecordDot #-}
 #endif
 
@@ -33,7 +33,7 @@ queryWebTable sqlBackend = do
     rows <- runSql sqlBackend $
         select $ do
             webs <- from $ table @Webs
-#if __GLASSGLOW_HASKELL__ >= 902
+#if MIN_VERSION_GLASGOW_HASKELL(9,2,0,0)
             pure
                 ( webs.web
                 , webs.domain
@@ -136,7 +136,7 @@ queryWebTable sqlBackend = do
 queryComicTable :: (MonadUnliftIO m, MonadThrow m) => SqlBackend -> m ComicTable
 queryComicTable sqlBackend = do
     rows <- runSql sqlBackend $
-#if __GLASSGLOW_HASKELL__ >= 902
+#if MIN_VERSION_GLASGOW_HASKELL(9,2,0,0)
         select $ do
             comics :& _urls <-
                 from $
@@ -189,7 +189,7 @@ queryComicTable sqlBackend = do
 queryUrlTable :: (MonadUnliftIO m, MonadThrow m) => SqlBackend -> m UrlTable
 queryUrlTable sqlBackend = do
     rows <- runSql sqlBackend $
-#if __GLASSGLOW_HASKELL__ >= 902
+#if MIN_VERSION_GLASGOW_HASKELL(9,2,0,0)
         select $ do
             urls :& webs <-
                 from $

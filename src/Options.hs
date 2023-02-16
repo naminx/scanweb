@@ -16,7 +16,7 @@ import Text.Megaparsec.Char.Lexer (decimal)
 import Text.URI (mkURI)
 
 
---
+---
 timestamp :: IsString s => s
 timestamp = __TIMESTAMP__
 

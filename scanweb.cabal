@@ -89,6 +89,7 @@ executable scanweb
     , modern-uri
     , monad-control
     , monad-logger
+    , monad-loops
     , optparse-simple
     , path
     , path-pieces

@@ -9,7 +9,7 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
-#if __GLASSGLOW_HASKELL__ >= 902
+#if MIN_VERSION_GLASGOW_HASKELL(9,2,0,0)
 {-# LANGUAGE OverloadedRecordDot #-}
 #endif
 
@@ -18,10 +18,12 @@ module Main where
 import App.Config
 import App.Tables
 import App.Types
-import Control.Monad.Extra (whileM)
+import Control.Monad.Extra (concatMapM, whileM)
 import Control.Monad.Logger
+import Control.Monad.Loops (untilM_)
 import Control.Monad.Trans.Resource
 import Data.Aeson.Lens
+import Data.Aeson
 import Data.Maybe (fromJust)
 import qualified Data.Text.IO as T
 import qualified Data.Text.Lazy.IO as TL
@@ -59,9 +61,15 @@ import Text.Megaparsec.Char (space1, string)
 import Text.Pretty.Simple (pPrint)
 import Text.Printf
 import Text.RawString.QQ (r)
-import Text.URI (Authority (Authority), mkURI, render, unRText)
+import Text.URI (
+    Authority (Authority),
+    mkURI,
+    render,
+    unRText,
+    UserInfo (UserInfo)
+ )
 import Text.URI.Lens (authHost, uriAuthority)
-import Text.URI.QQ (host, uri)
+import Text.URI.QQ (host, uri, username)
 import Web.Api.WebDriver as WD
 import qualified Prelude
 
@@ -144,9 +152,7 @@ queryComics links =
     bracket (newSqlBackend defaultDbFile) (liftIO . close') $
         (map unValues <$>) . runSqlConn query
   where
-    (+||+) = unsafeSqlBinOp " || "
-    infixr 5 +||+
-#if __GLASSGLOW_HASKELL__ >= 902
+#if MIN_VERSION_GLASGOW_HASKELL(9,2,0,0)
     query = select $ do
         webs :& urls :& comics <-
             from $
@@ -155,7 +161,7 @@ queryComics links =
                 )
                     `InnerJoin` table @Comics
                     `on` (\(_ :& urls :& comics) -> urls.comic ==. comics.comic)
-        let fullUrl = val [uri|https://|] +||+ webs.domain +||+ urls.path
+        let fullUrl = val [uri|https://|] ++. castString webs.domain ++. urls.path
         where_ $ fullUrl `in_` valList links
         orderBy $ map (asc . (fullUrl !=.) . val) links
         pure
@@ -172,7 +178,7 @@ queryComics links =
                 )
                     `InnerJoin` table @Comics
                     `on` (\(_ :& urls :& comics) -> urls .^ UrlsComic ==. comics .^ ComicsComic)
-        let fullUrl = val [uri|https://|] +||+ webs .^ WebsDomain +||+ urls .^ UrlsPath
+        let fullUrl = val [uri|https://|] ++. castString (webs .^ WebsDomain) ++. urls .^ UrlsPath
         where_ $ fullUrl `in_` valList links
         orderBy $ map (asc . (fullUrl !=.) . val) links
         pure
@@ -193,7 +199,7 @@ queryComic c =
     bracket (newSqlBackend defaultDbFile) (liftIO . close') $
         (fmap unValues . preview _head <$>) . runSqlConn query
   where
-#if __GLASSGLOW_HASKELL__ >= 902
+#if MIN_VERSION_GLASGOW_HASKELL(9,2,0,0)
     query = select $ do
         comics <- from $ table @Comics
         where_ $ comics.comic ==. val (Comic c)
@@ -208,12 +214,40 @@ queryComic c =
         (unValue title, unValue path, unValue volume, unValue chapter)
 
 
-queryWeb :: MonadUnliftIO m => URI -> m (Maybe Webs)
+queryWeb :: (MonadFail f, MonadUnliftIO m) => URI -> m (f WebInfo)
 queryWeb url =
     bracket (newSqlBackend defaultDbFile) (liftIO . close') $
-        (fmap unValues . preview _head <$>) . runSqlConn query
+       runSqlConn query
+            >>> fmap (preview _head >>> toMonadFail)
   where
-#if __GLASSGLOW_HASKELL__ >= 902
+    toMonadFail = maybe (fail "Unknown web") (return . toWebInfo)
+    toWebInfo
+        ( _
+        , webDomain_
+        , webUsername
+        , webPassword
+        , webSentinel
+        , webGenUrl
+        , webIsLoaded
+        , webScrapeComics
+        , webScrapeLatest
+        , webScrapeChapters
+        , webScrapeImages
+        ) =
+        WebInfo
+            { _webDomain = unValue webDomain_
+            , _userInfo = Just $ UserInfo
+                  (fromMaybe [username|user|] $ unValue webUsername)
+                  (unValue webPassword)
+            , _sentinel = unValue webSentinel
+            , _genUrl = unValue webGenUrl
+            , _isLoaded = unValue webIsLoaded
+            , _scrapeComics = unValue webScrapeComics
+            , _scrapeLatest = unValue webScrapeLatest
+            , _scrapeChapters = unValue webScrapeChapters
+            , _scrapeImages = unValue webScrapeImages
+            }
+#if MIN_VERSION_GLASGOW_HASKELL(9,2,0,0)
     query = select $ do
         webs <- from $ table @Webs
         where_ $ webs.domain ==. val (url ^?! domain)
@@ -248,30 +282,29 @@ queryWeb url =
             , webs .^ WebsScrapeImages
             )
 #endif
-    unValues ::
-        ( Value Web
-        , Value Domain
-        , Value (Maybe (RText 'Username))
-        , Value (Maybe (RText 'Password))
-        , Value URI
-        , Value Text
-        , Value Text
-        , Value Text
-        , Value Text
-        , Value Text
-        , Value Text
-        ) ->
-        Webs
-    unValues (w, d, u, p, a, t1, t2, t3, t4, t5, t6) =
-        Webs
-            (unValue w)
-            (unValue d)
-            (unValue u)
-            (unValue p)
-            (unValue a)
-            (unValue t1)
-            (unValue t2)
-            (unValue t3)
-            (unValue t4)
-            (unValue t5)
-            (unValue t6)
+
+
+getComicsFrom ::
+    (MonadThrow m, MonadUnliftIO m) =>
+    SessionId -> URI -> Int ->
+    m [(Comic, URI, ComicInfo)]
+getComicsFrom sess domain' page = do
+    webinfo <- queryWeb domain'
+    concatMapM getComicsAux webinfo
+  where
+    getComicsAux :: (MonadThrow m, MonadUnliftIO m) =>
+        WebInfo -> m [(Comic, URI, ComicInfo)]
+    getComicsAux webinfo = do
+        paths <- runWdSession sess $
+            executeScript (webinfo ^. genUrl) [toJSON page]
+                <&> toListOf (_String . toURI)
+        traverse getComicAux2 paths
+      where
+        getComicAux2 :: (MonadThrow m, MonadUnliftIO m) =>
+            URI -> m (Comic, URI, ComicInfo)
+        getComicAux2 url = runWdSession sess $ do
+           navigateToStealth $ render $ https (webinfo ^. webDomain) url
+           liftIO (sleep 1000)
+               `untilM_` executeScript (web' ^. isLoaded) [] <&> (^?! _Bool)
+           executeScript (webinfo ^. scrapeComics) []
+                <&> toListOf (_Array . to toList . to (fmap $ preview $ key "url" . _String . toURI) . to catMaybes)

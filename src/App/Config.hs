@@ -16,6 +16,7 @@ import App.Config.Windows
 import  App.Config.Linux
 #endif
 
+import qualified Control.Monad.Script.Http as Http
 import Data.Default (Default (..))
 import Import hiding (wait)
 import Path (Abs, File, SomeBase (Abs), relfile, (</>))
@@ -65,10 +66,13 @@ defaultOptions =
         }
 
 
-chromeConfig :: WebDriverConfig IO
+chromeConfig :: MonadUnliftIO m => WebDriverConfig m
 chromeConfig =
-    defaultWebDriverConfig
-        & environment .~ appWebDriverEnvironment
+    WDConfig
+      { _initialState = defaultWebDriverState
+      , _environment = appWebDriverEnvironment
+      , _evaluator = liftIO . Http.evalIO evalWDAct
+      }
   where
     appWebDriverEnvironment =
         defaultWebDriverEnvironment
@@ -97,7 +101,8 @@ normalChromeOptions =
         & chromeArgs
             ?~ [ "--user-data-dir=" <> userDataDir
                , "--save-page-as-mhtml"
-#if __GLASSGLOW_HASKELL__ < 902
+#if MIN_VERSION_GLASGOW_HASKELL(9,2,0,0)
+#else
                , "--no-sandbox"
 #endif
                ]

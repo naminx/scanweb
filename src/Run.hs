@@ -6,7 +6,7 @@
 {-# LANGUAGE NoImplicitPrelude #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
-#if __GLASSGLOW_HASKELL__ >= 902
+#if MIN_VERSION_GLASGOW_HASKELL(9,2,0,0)
 {-# LANGUAGE OverloadedRecordDot #-}
 #endif
 
@@ -174,7 +174,7 @@ runWd action = do
     liftIO $ runWdSession wdSess action
 
 
-runWdSession :: SessionId -> WebDriverT IO a -> IO a
+runWdSession :: (MonadThrow m, MonadUnliftIO m) => SessionId -> WebDriverT m a -> m a
 runWdSession wdSess action = do
     (result, _updatedState, _writerLog) <- runAction action
     case result of
@@ -426,7 +426,7 @@ updateComicTableChapter ::
 updateComicTableChapter comic chapter = do
     bracket (currentSqlBackend <%= id) (runSqlConn transactionUndo) $ do
         runSqlConn $ do
-#if __GLASSGLOW_HASKELL__ >= 902
+#if MIN_VERSION_GLASGOW_HASKELL(9,2,0,0)
             update $ \row -> do
                 set_ row [ComicsChapter =. val chapter]
                 where_ $ row.comic ==. val comic
@@ -448,7 +448,7 @@ updateComicTableVolume ::
 updateComicTableVolume comic volume = do
     sqlBackend <- currentSqlBackend <%= id
     runSql sqlBackend $
-#if __GLASSGLOW_HASKELL__ >= 902
+#if MIN_VERSION_GLASGOW_HASKELL(9,2,0,0)
         update $ \row -> do
             set_ row [ComicsVolume =. val volume]
             where_ $ row.comic ==. val comic
@@ -1000,7 +1000,7 @@ updateWebTable :: forall env s. (HasStateRef s env, HasApp s) => Web -> URI -> R
 updateWebTable web absUrl = do
     sqlBackend <- currentSqlBackend <%= id
     runSql sqlBackend $
-#if __GLASSGLOW_HASKELL__ >= 902
+#if MIN_VERSION_GLASGOW_HASKELL(9,2,0,0)
         update $ \row -> do
             set_ row [WebsSentinel =. val absUrl]
             where_ $ row.web ==. val web
