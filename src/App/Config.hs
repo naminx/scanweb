@@ -123,3 +123,7 @@ minWaitTime = 7.0
 
 maxWaitTime :: Seconds
 maxWaitTime = 15.0
+
+
+maxTimeOut :: Seconds
+maxTimeOut = 30.0

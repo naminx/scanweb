@@ -16,6 +16,7 @@
 module Main where
 
 import App.Config
+import App.Exceptions
 import App.Tables
 import App.Types
 import Control.Monad.Extra (concatMapM, whileM)
@@ -31,7 +32,7 @@ import Data.Tuple.Extra (dupe)
 import Database.Esqueleto.Experimental hiding ((<&>), (^.))
 import qualified Database.Esqueleto.Experimental as ES
 import Database.Esqueleto.Internal.Internal (unsafeSqlBinOp)
-import Import hiding (from, on)
+import Import hiding (from, on, mapMaybe, catMaybes)
 import Init
 import Options
 import Path (Abs, Dir, File, Path, Rel, SomeBase (..), parseAbsFile, (</>))
@@ -65,12 +66,14 @@ import Text.URI (
     Authority (Authority),
     mkURI,
     render,
+    renderStr,
     unRText,
     UserInfo (UserInfo)
  )
 import Text.URI.Lens (authHost, uriAuthority)
 import Text.URI.QQ (host, uri, username)
 import Web.Api.WebDriver as WD
+import Witherable
 import qualified Prelude
 
 
@@ -214,16 +217,16 @@ queryComic c =
         (unValue title, unValue path, unValue volume, unValue chapter)
 
 
-queryWeb :: (MonadFail f, MonadUnliftIO m) => URI -> m (f WebInfo)
+queryWeb :: (MonadThrow m, MonadUnliftIO m) => URI -> m WebInfo
 queryWeb url =
     bracket (newSqlBackend defaultDbFile) (liftIO . close') $
        runSqlConn query
-            >>> fmap (preview _head >>> toMonadFail)
+            >>> fmap (preview $ _head . to toWebInfo)
+            >>> (>>= maybe throwException return)
   where
-    toMonadFail = maybe (fail "Unknown web") (return . toWebInfo)
+    throwException = throwM $ UnknownWeb $ renderStr url
     toWebInfo
-        ( _
-        , webDomain_
+        ( webDomain_
         , webUsername
         , webPassword
         , webSentinel
@@ -252,8 +255,7 @@ queryWeb url =
         webs <- from $ table @Webs
         where_ $ webs.domain ==. val (url ^?! domain)
         pure
-            ( webs.web
-            , webs.domain
+            ( webs.domain
             , webs.username
             , webs.password
             , webs.sentinel
@@ -269,8 +271,7 @@ queryWeb url =
         webs <- from $ table @Webs
         where_ $ webs .^ WebsDomain ==. val (url ^?! domain)
         pure
-            ( webs .^ WebsWeb
-            , webs .^ WebsDomain
+            ( webs .^ WebsDomain
             , webs .^ WebsUsername
             , webs .^ WebsPassword
             , webs .^ WebsSentinel
@@ -284,27 +285,35 @@ queryWeb url =
 #endif
 
 
-getComicsFrom ::
-    (MonadThrow m, MonadUnliftIO m) =>
+getNewReleaseComics ::
+    (MonadFail m, MonadThrow m, MonadUnliftIO m) =>
     SessionId -> URI -> Int ->
     m [(Comic, URI, ComicInfo)]
-getComicsFrom sess domain' page = do
-    webinfo <- queryWeb domain'
-    concatMapM getComicsAux webinfo
+getNewReleaseComics sess webdomain page = do
+    webinfo <- queryWeb webdomain
+    listUrl <- getListUrl webinfo
+    comicUrls <- getComicUrls webinfo listUrl
+    queryComics comicUrls
   where
-    getComicsAux :: (MonadThrow m, MonadUnliftIO m) =>
-        WebInfo -> m [(Comic, URI, ComicInfo)]
-    getComicsAux webinfo = do
-        paths <- runWdSession sess $
-            executeScript (webinfo ^. genUrl) [toJSON page]
-                <&> toListOf (_String . toURI)
-        traverse getComicAux2 paths
-      where
-        getComicAux2 :: (MonadThrow m, MonadUnliftIO m) =>
-            URI -> m (Comic, URI, ComicInfo)
-        getComicAux2 url = runWdSession sess $ do
-           navigateToStealth $ render $ https (webinfo ^. webDomain) url
-           liftIO (sleep 1000)
-               `untilM_` executeScript (web' ^. isLoaded) [] <&> (^?! _Bool)
-           executeScript (webinfo ^. scrapeComics) []
-                <&> toListOf (_Array . to toList . to (fmap $ preview $ key "url" . _String . toURI) . to catMaybes)
+    getListUrl :: (MonadFail m, MonadThrow m, MonadUnliftIO m) => WebInfo -> m URI
+    getListUrl webinfo = runWdSession sess $ do
+        result <- executeScript (webinfo ^. genUrl) [toJSON page]
+        case result ^? _String of
+            Nothing -> fail $ "Unexpected script return value: " <> show result
+            Just value -> case value ^? toURI of
+                Nothing -> fail $ "Invalid URL: " <> T.unpack value
+                Just url -> return $ https (webinfo ^. webDomain) url
+
+    timeoutMsec :: Int
+    timeoutMsec = 1000 * 30
+
+    getComicUrls :: (MonadFail m, MonadThrow m, MonadUnliftIO m) => WebInfo -> URI -> m [URI]
+    getComicUrls webinfo listUrl = do
+        runWdSession sess $ do
+            navigateToStealth $ render listUrl
+            waitUntil (webinfo ^. isLoaded) timeoutMsec
+            result <- executeScript (webinfo ^. scrapeComics) []
+            case result ^? _Array of
+                Nothing -> fail $ "Unexpected script return value: " <> show result
+                Just vals -> do
+                    return $ mapMaybe (preview $ key "url" . _String . toURI) $ toList vals

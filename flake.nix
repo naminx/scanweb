@@ -34,9 +34,13 @@
               inherit (pkgs)
                 chromedriver
                 google-chrome
-                lambdabot;
+                lambdabot
+                python3Full
+                sqlitebrowser;
               inherit (hp)
                 fourmolu;
+              selenium = pkgs.python310Packages.selenium;
+              pylint = pkgs.python310Packages.pylint;
             };
             #  hlsCheck.enable = true;
           };

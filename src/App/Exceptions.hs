@@ -158,6 +158,15 @@ instance Exception InvalidBaseUrl where
         "Invalid base URL: " <> url
 
 
+newtype InvalidUrl = InvalidUrl String
+    deriving (Eq, Show)
+
+
+instance Exception InvalidUrl where
+    displayException (InvalidUrl url) =
+        "Invalid base URL: " <> url
+
+
 newtype UnexpectedQueryResult = UnexpectedQueryResult String
     deriving (Eq, Show)
 
@@ -176,9 +185,18 @@ instance Exception UpdateDatabaseFailed where
         "Update database failed: " <> query
 
 
+newtype UnexpectedScriptReturnValue = UnexpectedScriptReturnValue String
+    deriving (Eq, Show)
+
+
+instance Exception UnexpectedScriptReturnValue where
+    displayException (UnexpectedScriptReturnValue value) =
+        "Unexpected script return value: " <> value
+
+
 instance Exception WDError where
-    displayException wdError = show wdError
+    displayException = show
 
 
 instance Exception e => Exception (E e) where
-    displayException e = show e
+    displayException = show

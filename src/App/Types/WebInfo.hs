@@ -23,6 +23,7 @@ data WebInfo = WebInfo
     , _scrapeChapters :: Text
     , _scrapeImages :: Text
     }
+    deriving (Show)
 
 
 makeClassy ''WebInfo

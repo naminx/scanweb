@@ -109,5 +109,6 @@ executable scanweb
     , text
     , transformers-base
     , webdriver-w3c
+    , witherable
     , word8
   default-language: Haskell2010

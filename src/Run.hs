@@ -905,10 +905,10 @@ waitForClosingWin closingWin = do
 waitForLoaded :: forall env s. (HasStateRef s env, HasApp s) => RIO env ()
 waitForLoaded = do
     isLoadedScript <- currentWebInfo . isLoaded <%= id
-    runWd $ waitUntil isLoadedScript $ round $ minWaitTime * 1000
+    runWd $ waitUntil isLoadedScript $ round $ maxWaitTime * 1000
 
 
-waitUntil :: Text -> Int -> WebDriverT IO ()
+waitUntil :: MonadUnliftIO m => Text -> Int -> WebDriverT m ()
 waitUntil func msec =
     void $ executeScript jsWaitUntil [toJSON func, toJSON msec]
   where
