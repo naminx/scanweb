@@ -32,6 +32,7 @@
             enable = true;  # Enabled by default
             tools = hp: {
               inherit (pkgs)
+                black
                 chromedriver
                 google-chrome
                 lambdabot
