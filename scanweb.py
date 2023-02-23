@@ -77,9 +77,8 @@ def get_webs_table(con: Connection) -> dict[int, WebInfo]:
 
 
 def query_comics(con: Connection, relinfos: list[ReleaseInfo]) -> map:
-    full_path = "'https://' || webs.domain || urls.path"
     query = """
-        SELECT urls.comic, {full_path}, comics.title, comics.folder,
+        SELECT urls.comic, subtable.url, comics.title, comics.folder,
                comics.volume, comics.chapter, subtable.idx
           FROM ((webs INNER JOIN urls
             ON webs.web = urls.web) INNER JOIN comics
@@ -90,11 +89,10 @@ def query_comics(con: Connection, relinfos: list[ReleaseInfo]) -> map:
                        VALUES {values})
                 LIMIT -1 OFFSET 1)
             AS subtable
-            ON {full_path} = subtable.url
-        ORDER BY
+            ON "'https://' || webs.domain || urls.path" = subtable.url
+         ORDER BY
             subtable.idx;
   """.format(
-        full_path=full_path,
         values=",".join(["({i},?)".format(i=i) for i,_ in enumerate(relinfos)])
     )
     cur = con.cursor()

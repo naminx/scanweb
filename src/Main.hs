@@ -1,6 +1,8 @@
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
+#if MIN_VERSION_GLASGOW_HASKELL(9,2,0,0)
+{-# LANGUAGE OverloadedRecordDot #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE RankNTypes #-}
@@ -9,8 +11,6 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
-#if MIN_VERSION_GLASGOW_HASKELL(9,2,0,0)
-{-# LANGUAGE OverloadedRecordDot #-}
 #endif
 
 module Main where
@@ -23,16 +23,16 @@ import Control.Monad.Extra (concatMapM, whileM)
 import Control.Monad.Logger
 import Control.Monad.Loops (untilM_)
 import Control.Monad.Trans.Resource
-import Data.Aeson.Lens
 import Data.Aeson
+import Data.Aeson.Lens hiding (values)
 import Data.Maybe (fromJust)
 import qualified Data.Text.IO as T
 import qualified Data.Text.Lazy.IO as TL
 import Data.Tuple.Extra (dupe)
 import Database.Esqueleto.Experimental hiding ((<&>), (^.))
 import qualified Database.Esqueleto.Experimental as ES
-import Database.Esqueleto.Internal.Internal (unsafeSqlBinOp)
-import Import hiding (from, on, mapMaybe, catMaybes)
+import Database.Esqueleto.PostgreSQL (values)
+import Import hiding (catMaybes, from, link, mapMaybe, on)
 import Init
 import Options
 import Path (Abs, Dir, File, Path, Rel, SomeBase (..), parseAbsFile, (</>))
@@ -64,11 +64,11 @@ import Text.Printf
 import Text.RawString.QQ (r)
 import Text.URI (
     Authority (Authority),
+    UserInfo (UserInfo),
     mkURI,
     render,
     renderStr,
     unRText,
-    UserInfo (UserInfo)
  )
 import Text.URI.Lens (authHost, uriAuthority)
 import Text.URI.QQ (host, uri, username)
@@ -95,23 +95,23 @@ main = bracket_
                         \_ houtResult _ _ -> case houtResult of
                             Just hout -> do
                                 void $ waitForChromeDriver hout
-                                withAsync (consumeInput hout) $
-                                    const $
-                                        bracket
-                                            newWdSession
-                                            (`runWdSession` deleteSession)
-                                            $ \wdSess -> do
-                                                myApp <-
-                                                    newSomeRef $
-                                                        initApp
-                                                            logFunction
-                                                            procContext
-                                                            cliOptions
-                                                            conn
-                                                            wdSess
-                                                runRIO myApp $ do
-                                                    setupEnv
-                                                    getProg $ cliOptions ^. appMode
+                                withAsync (consumeInput hout)
+                                    $ const
+                                    $ bracket
+                                        newWdSession
+                                        (`runWdSession` deleteSession)
+                                    $ \wdSess -> do
+                                        myApp <-
+                                            newSomeRef $
+                                                initApp
+                                                    logFunction
+                                                    procContext
+                                                    cliOptions
+                                                    conn
+                                                    wdSess
+                                        runRIO myApp $ do
+                                            setupEnv
+                                            getProg $ cliOptions ^. appMode
                             Nothing -> return ()
                     else do
                         myApp <-
@@ -196,7 +196,6 @@ queryComics links =
         unValues' (title, path, volume, chapter) =
             (unValue title, unValue path, unValue volume, unValue chapter)
 
-
 queryComic :: MonadUnliftIO m => Int -> m (Maybe ComicInfo)
 queryComic c =
     bracket (newSqlBackend defaultDbFile) (liftIO . close') $
@@ -215,7 +214,6 @@ queryComic c =
 #endif
     unValues (title, path, volume, chapter) =
         (unValue title, unValue path, unValue volume, unValue chapter)
-
 
 queryWeb :: (MonadThrow m, MonadUnliftIO m) => URI -> m WebInfo
 queryWeb url =
@@ -284,7 +282,6 @@ queryWeb url =
             )
 #endif
 
-
 getNewReleaseComics ::
     (MonadFail m, MonadThrow m, MonadUnliftIO m) =>
     SessionId -> URI -> Int ->
@@ -317,3 +314,55 @@ getNewReleaseComics sess webdomain page = do
                 Nothing -> fail $ "Unexpected script return value: " <> show result
                 Just vals -> do
                     return $ mapMaybe (preview $ key "url" . _String . toURI) $ toList vals
+
+
+queryComics' :: MonadUnliftIO m => [URI] -> m [(Comic, URI, ComicInfo)]
+queryComics' [] = return []
+queryComics' (link:links) =
+    bracket (newSqlBackend defaultDbFile) (liftIO . close') $
+        (map unValues <$>) . runSqlConn query
+  where
+#if MIN_VERSION_GLASGOW_HASKELL(9,2,0,0)
+    -- SELECT urls.comic, subtable.url, comics.title, comics.folder,
+    --        comics.volume, comics.chapter, subtable.idx
+    --   FROM ((webs INNER JOIN urls
+    --     ON webs.web = urls.web) INNER JOIN comics
+    --     ON urls.comic = comics.comic) INNER JOIN (
+    --        SELECT *
+    --          FROM (SELECT 0 AS idx, '' AS url
+    --                UNION ALL
+    --                VALUES {values})
+    --         LIMIT -1 OFFSET 1)
+    --     AS subtable
+    --     ON "'https://' || webs.domain || urls.path" = subtable.url
+    --  ORDER BY
+    --     subtable.idx;
+
+    https_ domain_ path_ = val [uri|https://|] ++. castString domain_ ++. path_
+    enval i n = (val n, val i)
+    query = select $ do
+        _ :& urls :& comics :& (full_url, idx) <-
+            from
+                $ ( ( table @Webs `InnerJoin` table @Urls
+                        `on` (\(webs :& urls) -> webs.web ==. urls.web)
+                    )
+                        `InnerJoin` table @Comics
+                        `on` (\(_ :& urls :& comics) -> urls.comic ==. comics.comic)
+                  )
+                    `InnerJoin` from (values $ imap enval $ link :| links)
+                `on` ( \(webs :& urls :& _ :& (full_url, _)) ->
+                        https_ webs.domain urls.path ==. full_url
+                     )
+        orderBy [asc idx]
+        pure
+            ( urls.comic
+            , full_url
+            , (comics.title, comics.folder, comics.volume, comics.chapter)
+            )
+#else
+#endif
+    unValues (comic, uri_, comicInfo) =
+        (unValue comic, unValue uri_, unValues' comicInfo)
+      where
+        unValues' (title, path, volume, chapter) =
+            (unValue title, unValue path, unValue volume, unValue chapter)
