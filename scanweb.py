@@ -1,20 +1,39 @@
 #!/usr/bin/env python3
 
+from colorama import init as colorama_init
+from colorama import Fore
+from colorama import Style
+from itertools import takewhile
+from os import mkdir
+from pathlib import Path
 from selenium import webdriver
 from selenium.webdriver.chrome.webdriver import WebDriver
 from sqlite3 import Connection
+from typing import Callable
 from typing import List
+from w3lib.url import parse_data_uri
 import sqlite3
 
-# timeout in milliseconds
-max_timeout = 1000 * 30
+# set config = configs[0] if running in wsl
+# set config = configs[1] if running in repl.it
+configs: list[str] = ["wsl", "replit"]
+config: str = configs[0]
+
+
+blue: str = f"{Fore.BLUE}"
+gray: str = f"{Fore.BLACK}{Style.BRIGHT}"
+green: str = f"{Fore.GREEN}"
+red: str = f"{Fore.RED}"
+yellow: str = f"{Fore.YELLOW}"
+reset: str = f"{Style.RESET_ALL}"
 
 
 class ReleaseInfo:
     def __init__(self, record: dict):
-        if record["chapter"] is not None:
+        # chapter has priority over volume
+        if "chapter" in record:
             self.chapter = record["chapter"]
-        elif record["volume"] is not None:
+        elif "volume" in record:
             self.volume = record["volume"]
         self.url = record["url"]
 
@@ -62,22 +81,22 @@ class ComicInfo:
         self.chapter = record[_chapter]
         self.idx = record[_idx]
         self.new_release = new_release
+        title = record[_title]
+        volume = record[_volume]
+        chapter = record[_chapter]
+        self.info = f"{yellow}{title} {gray}(Vol.{volume}, Ch.{chapter}){reset}"
 
 
-def get_webs_table(con: Connection) -> dict[int, WebInfo]:
-    query = """
-        SELECT
-            *
-        FROM
-            webs;
-  """
+def get_web_infos(con: Connection) -> dict[int, WebInfo]:
+    query = """ SELECT * FROM webs; """
     cur = con.cursor()
-    res = cur.execute(query)
-    return dict(map(lambda row: (row[0], WebInfo(row)), res.fetchall()))
+    result = cur.execute(query)
+    return dict(map(lambda row: (row[0], WebInfo(row)), result.fetchall()))
 
 
-def query_comics(con: Connection, relinfos: list[ReleaseInfo]) -> map:
-    query = """
+def query_comics(con: Connection, releases: list[ReleaseInfo]) -> map:
+    values = ",".join([f"({i},?)" for i, _ in enumerate(releases)])
+    query = f"""
         SELECT urls.comic, subtable.url, comics.title, comics.folder,
                comics.volume, comics.chapter, subtable.idx
           FROM ((webs INNER JOIN urls
@@ -89,18 +108,18 @@ def query_comics(con: Connection, relinfos: list[ReleaseInfo]) -> map:
                        VALUES {values})
                 LIMIT -1 OFFSET 1)
             AS subtable
-            ON "'https://' || webs.domain || urls.path" = subtable.url
-         ORDER BY
-            subtable.idx;
-  """.format(
-        values=",".join(["({i},?)".format(i=i) for i,_ in enumerate(relinfos)])
-    )
+         WHERE 'https://' || webs.domain || urls.path = subtable.url
+         ORDER BY subtable.idx;
+  """
+    # con.set_trace_callback(print)
     cur = con.cursor()
-    res = cur.execute(query, list(map(lambda x: x.url, relinfos)))
-    return map(lambda row: ComicInfo(row), res.fetchall())
+    result = cur.execute(query, [*map(lambda release: release.url, releases)])
+    return map(lambda row: ComicInfo(row), result.fetchall())
 
 
-def wait_until(chrome: WebDriver, pred: str, timeout: int = max_timeout) -> None:
+def wait_until(chrome: WebDriver, pred: str, timeout: int = -1) -> None:
+    if timeout == -1:
+        timeout = max_timeout
     js_wait_until = """
         return await new Promise((resolve, reject) => {
             const timeWas = new Date();
@@ -118,47 +137,6 @@ def wait_until(chrome: WebDriver, pred: str, timeout: int = max_timeout) -> None
     chrome.execute_script(js_wait_until, pred, timeout)
 
 
-new_rels = [
-    {"chapter": "119", "url": "https://weloma.art/860/"},
-    {"chapter": "32", "url": "https://weloma.art/2559/"},
-    {"chapter": "24", "url": "https://weloma.art/3055/"},
-    {"chapter": "29.2", "url": "https://weloma.art/283/"},
-    {"chapter": "19.1", "url": "https://weloma.art/2404/"},
-    {"chapter": "14.1", "url": "https://weloma.art/2532/"},
-    {"chapter": "23", "url": "https://weloma.art/2608/"},
-    {"chapter": "17", "url": "https://weloma.art/3141/"},
-    {"chapter": "47.3", "url": "https://weloma.art/142/"},
-    {"chapter": "225", "url": "https://weloma.art/2317/"},
-    {"chapter": "9", "url": "https://weloma.art/2990/"},
-    {"chapter": "2", "url": "https://weloma.art/3435/"},
-    {"chapter": "1", "url": "https://weloma.art/3438/"},
-    {"chapter": "20", "url": "https://weloma.art/1706/"},
-    {"chapter": "16", "url": "https://weloma.art/2035/"},
-    {"chapter": "28", "url": "https://weloma.art/3347/"},
-    {"chapter": "13", "url": "https://weloma.art/3400/"},
-    {"chapter": "6", "url": "https://weloma.art/3421/"},
-    {"chapter": "5.1", "url": "https://weloma.art/3424/"},
-    {"chapter": "35", "url": "https://weloma.art/2542/"},
-]
-
-subtable = """
-    SELECT
-      *
-    FROM
-      (
-        SELECT
-          0 AS volume,
-          '' AS chapter,
-          '' AS url
-        UNION ALL
-        VALUES
-          {values}
-      )
-      """
-
-configs = ["wsl", "replit"]
-config = configs[0]
-
 chrome_options = webdriver.ChromeOptions()
 match config:
     case "wsl":
@@ -172,28 +150,250 @@ match config:
         chrome_options.binary_location = "/nix/store/x205pbkd5xh5g4iv0g58xjla55has3cx-chromium-108.0.5359.94/bin/chromium"
 
 
-chrome = webdriver.Chrome(options=chrome_options)
-list_of_webs = [3]
-max_page = 5
+def newer_than(volume: int, chapter: str) -> Callable[[ReleaseInfo], bool]:
+    return (
+        lambda relinfo: float(relinfo.chapter) > float(chapter)
+        if hasattr(relinfo, "chapter")
+        else relinfo.volume > volume
+        if hasattr(relinfo, "volume")
+        else False
+    )
 
 
-con = sqlite3.connect("scanweb.sqlite3")
-rows = get_webs_table(con)
-for web in list_of_webs:
-    for page in [*range(1, max_page + 1)]:
-        webinfo = rows[web]
-        result = chrome.execute_script(webinfo.gen_url, page)
-        chrome.get("https://" + webinfo.domain + result)
-        wait_until(chrome, webinfo.is_loaded)
-        res = chrome.execute_script(webinfo.scrape_comics)
-        urls = list(map(lambda row: ReleaseInfo(row), res))
-        for comic in query_comics(con, urls):
-            print(
-                comic.title
-                + " (Vol."
-                + str(comic.volume)
-                + ", Ch."
-                + comic.chapter
-                + ")"
-            )
-            chrome.get(comic.url)
+# pylint: disable=anomalous-backslash-in-string
+xml_http_request = """
+      const url = arguments[0];
+      const resolve = arguments[arguments.length - 1];
+      const magic = "xmlHttpRequest";
+      const input = document.createElement("input");
+      const uid = () => {
+          const tmp = performance.now().toString(36).replace(/\./g, "");
+          return document.getElementById(tmp) == undefined ? tmp : uid();
+      };
+      input.id = uid();
+      input.type = "hidden";
+      document.querySelectorAll("body")[0].append(input);
+      const handler = () => {
+          input.removeEventListener(input.id, handler);
+          const result = input.value;
+          delete input.id;
+          input.remove();
+          resolve(result);
+      };
+      input.addEventListener(input.id, handler);
+      const location = window.location;
+      const origin = location.protocol + "//" + location.hostname + "/";
+      window.postMessage(JSON.stringify({
+          magic: magic,
+          url: url,
+          id: input.id
+      }), origin);
+"""
+
+
+def download_images(
+    chrome: WebDriver, relinfo: ReleaseInfo, file_path: str, images: list
+) -> bool:
+    mkdir(file_path)
+    if hasattr(relinfo, "chapter"):
+        relinfo = f"chapter {yellow}{relinfo.chapter}{reset}"
+    else:
+        relinfo = f"volume {yellow}{relinfo.volume}{reset}"
+    downloading = f"{gray}downloading{reset} {relinfo}"
+    left_bracket = f"{gray}[{reset}"
+    print(downloading, left_bracket, end="", flush=True)
+    success = True
+    if len(images) == 0:
+        print(f"{red}Error: Images not found{reset}")
+        success = False
+    else:
+        for n, image_url in enumerate(images, start=1):
+            done = False
+            data_uri = chrome.execute_async_script(xml_http_request, image_url)
+            data = parse_data_uri(data_uri)
+            base = str(n).zfill(3)
+            ext = data.media_type.partition("/")[2]
+            if ext == "jpeg":
+                ext = "jpg"
+            file_name = f"{base}.{ext}"
+            tick = str(n) if n % 10 == 0 else "|" if n % 5 == 0 else "·"
+            with open("/".join([file_path, file_name]), "wb") as file:
+                file.write(data.data)
+                done = True
+            if done:
+                color = f"{green}"
+            else:
+                color = f"{red}"
+                success = False
+            print(f"{color}{tick}{reset}", end="", flush=True)
+    right_bracket = f"{gray}]{reset}"
+    print(right_bracket)
+    return success
+
+
+def make_chapter_dirname(relinfo: ReleaseInfo) -> str:
+    if hasattr(relinfo, "chapter"):
+        splits = [*relinfo.chapter.partition(".")]
+        splits[0] = splits[0].zfill(3)
+        relinfo_dir = "".join(splits)
+    elif hasattr(relinfo, "volume"):
+        relinfo_dir = str(relinfo.volume).zfill(2)
+    return relinfo_dir
+
+
+class ChromeDriver:
+    def __init__(self, options) -> None:
+        self.options = options
+        self.chrome = webdriver.Chrome(options=options)
+
+    def __enter__(self) -> WebDriver:
+        return self.chrome
+
+    def __exit__(self, *args) -> None:
+        self.chrome.quit()
+
+
+def update_comics_table(con: Connection, comic: ComicInfo, relinfo: ReleaseInfo) -> int:
+    cur = con.cursor()
+    query = """
+        UPDATE comics
+        SET {relinfo} = ?
+        WHERE comic = ?;
+  """
+    if hasattr(relinfo, "chapter"):
+        cur.execute(query.format(relinfo="chapter"), [relinfo.chapter, comic.comic])
+    elif hasattr(relinfo, "volume"):
+        cur.execute(query.format(relinfo="volume"), [relinfo.volume, comic.comic])
+    con.commit()
+    return cur.rowcount
+
+
+def update_webs_table(con: Connection, web: int, sentinel: str) -> int:
+    cur = con.cursor()
+    query = """
+        UPDATE webs
+        SET sentinel = ?
+        WHERE web = ?;
+  """
+    cur.execute(query, [sentinel, web])
+    con.commit()
+    return cur.rowcount
+
+
+def download_chapter(
+    chrome: WebDriver, web_info: WebInfo, comic: ComicInfo, chapter: ReleaseInfo
+) -> bool:
+    chrome.get(chapter.url)
+    print(web_info.is_loaded)
+    wait_until(chrome, web_info.is_loaded)
+    chap_dir = make_chapter_dirname(chapter)
+    file_path = "/".join([root_dir, comic.folder, chap_dir])
+    images = chrome.execute_script(web_info.scrape_images)
+    return download_images(chrome, chapter, file_path, images)
+
+
+def download_comic(
+    con: Connection, chrome: WebDriver, web_info: WebInfo, comic: ComicInfo
+) -> None:
+    chrome.get(comic.url)
+    wait_until(chrome, web_info.is_loaded)
+    chapters = chrome.execute_script(web_info.scrape_chapters)
+    newer_than_comic = newer_than(comic.volume, comic.chapter)
+    releases = map(lambda row: ReleaseInfo(row), chapters)
+    new_chapters = [*filter(newer_than_comic, releases)]
+    if len(new_chapters) == 0:
+        print(f"{yellow}{comic.title}{reset} {green}is up to date{reset}")
+        return True
+    else:
+        success = True
+        print(f"{gray}scanning{reset} {comic.info}")
+        for chapter in new_chapters:
+            if download_chapter(chrome, web_info, comic, chapter):
+                if update_comics_table(con, comic, chapter) != 1:
+                    print(f"{red}Error: Cannot update comics table{reset}")
+            else:
+                success = False
+        return success
+
+
+def scanweb(webs: list[int]) -> None:
+    con = sqlite3.connect(db_file)
+    web_infos = get_web_infos(con)
+    colorama_init()
+    with ChromeDriver(chrome_options) as chrome:
+        for web in webs:
+            all_comics = []
+            sentinel = 0
+            for page in [*range(first_page, last_page + 1)]:
+                web_info = web_infos[web]
+                domain = f"{blue}{web_info.domain}{reset}"
+                page_no = f"{gray}[{page}]{reset}"
+                print(domain, page_no)
+                urlpath = chrome.execute_script(web_info.gen_url, page)
+                chrome.get(f"https://{web_info.domain}{urlpath}")
+                wait_until(chrome, web_info.is_loaded)
+                comics = chrome.execute_script(web_info.scrape_comics)
+                pred = lambda comic: comic.url != web_info.sentinel
+                releases = map(lambda row: ReleaseInfo(row), comics)
+                new_comics = [*takewhile(pred, releases)]
+                all_comics = all_comics + new_comics
+                if len(new_comics) > 0:
+                    for comic in query_comics(con, new_comics):
+                        if not download_comic(con, chrome, web_info, comic):
+                            for i, elem in enumerate(all_comics):
+                                if elem.url == comic.url:
+                                    sentinel = i + 1
+                                    break
+                if len(new_comics) != len(comics):
+                    break
+            if len(all_comics) > 0:
+                if update_webs_table(con, web, all_comics[sentinel].url) != 1:
+                    print(f"{red}Error: Cannot update webs table{reset}")
+
+
+def rm_comic(comic: int) -> int:
+    con = sqlite3.connect(db_file)
+    con.execute("PRAGMA foreign_keys = 1")
+    cur = con.cursor()
+    delete_comic = "DELETE FROM comics WHERE comic=?;"
+    cur.execute(delete_comic, [comic])
+    con.commit()
+    if cur.rowcount == 1:
+        shift_up = "UPDATE comics SET comic=-(comic-1) WHERE comic>?;"
+        cur.execute(shift_up, [comic])
+        negate_minus_id = "UPDATE comics SET comic=-comic WHERE comic<0;"
+        cur.execute(negate_minus_id)
+        con.commit()
+    con.close()
+    return cur.rowcount
+
+
+first_page: int = 1
+last_page: int = 20
+root_dir: str = "/mnt/m/Documents/Comics"
+db_file: str = "scanweb.sqlite3"
+max_timeout: int = 1000 * 30  # milliseconds
+
+mangaraw_so: int = 0
+mangaraw_io: int = 1
+manga1001_su: int = 2
+weloma_art: int = 3
+welovemanga_one: int = 4
+klmanga_net: int = 5
+hachimanga_com: int = 6
+j8jp_com: int = 7
+
+list_of_webs: list[int] = [
+    # mangaraw_so,
+    # mangaraw_io,
+    # manga1001_su,
+    weloma_art,
+    welovemanga_one,
+    klmanga_net,
+    # hachimanga_com,
+    # j8jp_com,
+]
+
+
+if __name__ == "__main__":
+    scanweb(list_of_webs)

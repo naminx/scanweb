@@ -39,6 +39,7 @@
 // @connect      j9jp.com
 // @connect      justaquickbite.com
 // @connect      klimv1.xyz
+// @connect      h4.klimv1.xyz
 // @connect      manga1000.top
 // @connect      mangahatachi.com
 // @connect      megabyteblaze.me

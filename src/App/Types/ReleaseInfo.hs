@@ -56,29 +56,23 @@ instance Ord ReleaseInfo where
                     <> (show a <> " vs " <> show b)
 
 
-{--
-comicChapter :: Parser m Chapter
-comicChapter = do
-    chapter <- decimal
-    section <- optional $ single '.' >> decimal
-    return $ Chapter chapter section
---}
-
 type Parser m a = ParsecT Void Text m a
 
 
 comicReleaseInfo :: Parser m ReleaseInfo
 comicReleaseInfo = MP.try episode <|> MP.try book <|> episodes
   where
-    episode =
-        string "第"
-            >> comicChapter
-            >>= (string "話" >>) . return . Episode
+    episode = do
+        _ <- string "第"
+        chap <- comicChapter
+        _ <- string "話"
+        return $ Episode chap
 
-    book =
-        string "第"
-            >> decimal
-            >>= (string "巻" >>) . return . Book . Volume
+    book = do
+        _ <- string "第"
+        vol <- decimal
+        _ <- string "巻"
+        return $ Book $ Volume vol
 
     episodes = do
         _ <- string "第"

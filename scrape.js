@@ -1,7 +1,13 @@
 //============================================================================
 // common: minified
 //============================================================================
-var d=document;var xpaths=(p)=>((r)=>Array.from({length:r.snapshotLength},(_,i)=>r.snapshotItem(i)))(d.evaluate(p,d,null,7));var xpath=(p,r=d)=>d.evaluate(p,r,null,9).singleNodeValue;
+var d = document;
+var xpaths = (p) =>
+  ((r) =>
+    Array.from({ length: r.snapshotLength }, (_, i) => r.snapshotItem(i)))(
+    d.evaluate(p, d, null, 7)
+  );
+var xpath = (p, r = d) => d.evaluate(p, r, null, 9).singleNodeValue;
 
 //============================================================================
 // common: readable
@@ -25,8 +31,8 @@ const xpath = (path, root = document) =>
 // mangaraw.so
 //============================================================================
 return xpaths(
-  '//div[@class="container"]/div[contains(@class, "section-container")]//'
-    + 'div[contains(@class, "manga-item")]/a[2]/parent::div'
+  '//div[@class="container"]/div[contains(@class, "section-container")]//' +
+    'div[contains(@class, "manga-item")]/a[2]/parent::div'
 ).map((div) => ({
   url: xpath("a[2]", div).href,
   chapter: xpath("a[3]", div).textContent.replace(/.*【第(.*)話】.*/, "$1"),
@@ -152,6 +158,8 @@ return xpaths('//div[@class="chapter-content"]//img').map(
 //============================================================================
 // klmanga.net:
 //============================================================================
+document.evaluate('//a[contains(concat(" ", normalize-space(@class), " "), " navbar-brand ")]', document, null, XPathResult.ORDERED_NODE_SNAPSHOT_TYPE).snapshotLength>0
+
 return xpaths(
   '//div[contains(@class, "bodythumb")]//div[contains(@class, "thumb-wrapper")]'
 ).map((div) => ({

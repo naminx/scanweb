@@ -8,12 +8,12 @@
     flake-parts.lib.mkFlake { inherit inputs; } {
       systems = nixpkgs.lib.systems.flakeExposed;
       imports = [ inputs.haskell-flake.flakeModule ];
-      # perSystem = { self', pkgs, ... }: {
       perSystem = { config, self', inputs', pkgs, system, ... }: {
         _module.args.pkgs = import nixpkgs {
           inherit system;
-          overlays = [( final: prev: {
+          overlays = [( self: super: {
             all-cabal-hashes = inputs.all-cabal-hashes;
+            my-neovim = self.callPackage ./vim.nix {};
           })];
           config = {
             # for script-monad & wedriver-w3c
@@ -36,12 +36,19 @@
                 chromedriver
                 google-chrome
                 lambdabot
+                nodejs
+                my-neovim
                 python3Full
                 sqlitebrowser;
+              inherit (pkgs.nodePackages)
+                prettier;
               inherit (hp)
                 fourmolu;
-              selenium = pkgs.python310Packages.selenium;
-              pylint = pkgs.python310Packages.pylint;
+              inherit (pkgs.python310Packages)
+                colorama
+                pylint
+                selenium
+                w3lib;
             };
             #  hlsCheck.enable = true;
           };
