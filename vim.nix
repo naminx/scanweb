@@ -31,7 +31,7 @@ in
   neovim.override {
     viAlias = true;
     configure = {
-      customRC = lib.strings.fileContents ./.vimrc;
+      customRC = lib.strings.fileContents ./init.vim;
       packages.myPlugins = with vimPlugins; {
         start = myVimPlugins;
         opt = [ ];

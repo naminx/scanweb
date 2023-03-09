@@ -51,9 +51,6 @@ import Formatting.Formatters (int, text)
 import Lib hiding (domain)
 import qualified Lib as URI
 import Network.HTTP.Client (HttpException)
-
--- import Network.Wreq (defaults, header, responseBody, responseHeader)
--- import Network.Wreq.Session (getWith)
 import Path (
     Abs,
     Dir,
@@ -107,7 +104,18 @@ import Text.URI.Lens (
     uriQuery,
     uriScheme,
  )
-import Web.Api.WebDriver hiding (Page)
+import Web.Api.WebDriver
+    ( ContextId,
+      closeWindow,
+      executeAsyncScript,
+      executeScript,
+      getWindowHandle,
+      getWindowHandles,
+      navigateToStealth,
+      switchToWindow,
+      execWebDriverT,
+      WebDriverT,
+      SessionId )
 
 
 mkWebTable :: forall s env. (HasStateRef s env, HasApp s) => RIO env ()

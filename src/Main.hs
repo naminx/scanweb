@@ -3,6 +3,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 #if MIN_VERSION_GLASGOW_HASKELL(9,2,0,0)
 {-# LANGUAGE OverloadedRecordDot #-}
+#endif
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE RankNTypes #-}
@@ -11,7 +12,6 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
-#endif
 
 module Main where
 
@@ -322,24 +322,9 @@ queryComics' (link:links) =
     bracket (newSqlBackend defaultDbFile) (liftIO . close') $
         (map unValues <$>) . runSqlConn query
   where
-#if MIN_VERSION_GLASGOW_HASKELL(9,2,0,0)
-    -- SELECT urls.comic, subtable.url, comics.title, comics.folder,
-    --        comics.volume, comics.chapter, subtable.idx
-    --   FROM ((webs INNER JOIN urls
-    --     ON webs.web = urls.web) INNER JOIN comics
-    --     ON urls.comic = comics.comic) INNER JOIN (
-    --        SELECT *
-    --          FROM (SELECT 0 AS idx, '' AS url
-    --                UNION ALL
-    --                VALUES {values})
-    --         LIMIT -1 OFFSET 1)
-    --     AS subtable
-    --     ON "'https://' || webs.domain || urls.path" = subtable.url
-    --  ORDER BY
-    --     subtable.idx;
-
     https_ domain_ path_ = val [uri|https://|] ++. castString domain_ ++. path_
     enval i n = (val n, val i)
+#if MIN_VERSION_GLASGOW_HASKELL(9,2,0,0)
     query = select $ do
         _ :& urls :& comics :& (full_url, idx) <-
             from
@@ -360,6 +345,25 @@ queryComics' (link:links) =
             , (comics.title, comics.folder, comics.volume, comics.chapter)
             )
 #else
+    query = select $ do
+        _ :& urls :& comics :& (full_url, idx) <-
+            from
+                $ ( ( table @Webs `InnerJoin` table @Urls
+                        `on` (\(webs :& urls) -> webs .^ WebsWeb ==. urls .^ UrlsWeb)
+                    )
+                        `InnerJoin` table @Comics
+                        `on` (\(_ :& urls :& comics) -> urls .^ UrlsComic ==. comics .^ ComicsComic)
+                  )
+                    `InnerJoin` from (values $ imap enval $ link :| links)
+                `on` ( \(webs :& urls :& _ :& (full_url, _)) ->
+                        https_ (webs .^ WebsDomain) (urls .^ UrlsPath) ==. full_url
+                     )
+        orderBy [asc idx]
+        pure
+            ( urls .^ UrlsComic
+            , full_url
+            , (comics .^ ComicsTitle, comics .^ ComicsFolder, comics .^ ComicsVolume, comics .^ ComicsChapter)
+            )
 #endif
     unValues (comic, uri_, comicInfo) =
         (unValue comic, unValue uri_, unValues' comicInfo)

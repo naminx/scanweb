@@ -17,7 +17,7 @@ import sqlite3
 # set config = configs[0] if running in wsl
 # set config = configs[1] if running in repl.it
 configs: list[str] = ["wsl", "replit"]
-config: str = configs[0]
+config: str = configs[1]
 
 
 blue: str = f"{Fore.BLUE}"
@@ -131,7 +131,7 @@ def wait_until(chrome: WebDriver, pred: str, timeout: int = -1) -> None:
                     clearInterval(wait);
                     resolve();
                 }
-            }, 200);
+            }, 1000);
         });
   """
     chrome.execute_script(js_wait_until, pred, timeout)
@@ -142,12 +142,14 @@ match config:
     case "wsl":
         chrome_options.add_argument("--user-data-dir=/home/namin/.config/google-chrome")
         chrome_options.binary_location = "/nix/store/4bp8w2xxx2b52dq43n1kwbhny8ja46w6-google-chrome-110.0.5481.77/bin/google-chrome-stable"
+        root_dir: str = "/mnt/m/Documents/Comics"
     case "replit":
         chrome_options.add_argument("--no-sandbox")
         chrome_options.add_argument(
-            "--user-data-dir=/home/runner/pyscan/.config/chromium"
+            "--user-data-dir=/home/runner/pyscan/.config/google-chrome"
         )
-        chrome_options.binary_location = "/nix/store/x205pbkd5xh5g4iv0g58xjla55has3cx-chromium-108.0.5359.94/bin/chromium"
+        chrome_options.binary_location = "/nix/store/k2rzszkc15aiyclc5p7063032jmg1dij-google-chrome-108.0.5359.94/bin/google-chrome-stable"
+        root_dir: str = "/home/runner/pyscan/comics"
 
 
 def newer_than(volume: int, chapter: str) -> Callable[[ReleaseInfo], bool]:
@@ -196,9 +198,9 @@ def download_images(
 ) -> bool:
     mkdir(file_path)
     if hasattr(relinfo, "chapter"):
-        relinfo = f"chapter {yellow}{relinfo.chapter}{reset}"
+        relinfo = f"{gray}chapter{reset} {yellow}{relinfo.chapter}{reset}"
     else:
-        relinfo = f"volume {yellow}{relinfo.volume}{reset}"
+        relinfo = f"{gray}volume{reset} {yellow}{relinfo.volume}{reset}"
     downloading = f"{gray}downloading{reset} {relinfo}"
     left_bracket = f"{gray}[{reset}"
     print(downloading, left_bracket, end="", flush=True)
@@ -284,7 +286,6 @@ def download_chapter(
     chrome: WebDriver, web_info: WebInfo, comic: ComicInfo, chapter: ReleaseInfo
 ) -> bool:
     chrome.get(chapter.url)
-    print(web_info.is_loaded)
     wait_until(chrome, web_info.is_loaded)
     chap_dir = make_chapter_dirname(chapter)
     file_path = "/".join([root_dir, comic.folder, chap_dir])
@@ -293,16 +294,19 @@ def download_chapter(
 
 
 def download_comic(
-    con: Connection, chrome: WebDriver, web_info: WebInfo, comic: ComicInfo
+    con: Connection,
+    chrome: WebDriver,
+    web_info: WebInfo,
+    comic: ComicInfo,
 ) -> None:
+    newer_than_comic = newer_than(comic.volume, comic.chapter)
     chrome.get(comic.url)
     wait_until(chrome, web_info.is_loaded)
     chapters = chrome.execute_script(web_info.scrape_chapters)
-    newer_than_comic = newer_than(comic.volume, comic.chapter)
-    releases = map(lambda row: ReleaseInfo(row), chapters)
-    new_chapters = [*filter(newer_than_comic, releases)]
+    all_releases = map(lambda row: ReleaseInfo(row), chapters)
+    new_chapters = [*filter(newer_than_comic, all_releases)]
     if len(new_chapters) == 0:
-        print(f"{yellow}{comic.title}{reset} {green}is up to date{reset}")
+        print(f"{gray}scanning{reset} {comic.info} {green}is up to date{reset}")
         return True
     else:
         success = True
@@ -339,6 +343,10 @@ def scanweb(webs: list[int]) -> None:
                 all_comics = all_comics + new_comics
                 if len(new_comics) > 0:
                     for comic in query_comics(con, new_comics):
+                        release = [r for r in new_comics if r.url == comic.url]
+                        if not newer_than(comic.volume, comic.chapter)(release[0]):
+                            print(f"{yellow}{comic.title}{reset} {green}is up to date{reset}")
+                            continue
                         if not download_comic(con, chrome, web_info, comic):
                             for i, elem in enumerate(all_comics):
                                 if elem.url == comic.url:
@@ -370,7 +378,6 @@ def rm_comic(comic: int) -> int:
 
 first_page: int = 1
 last_page: int = 20
-root_dir: str = "/mnt/m/Documents/Comics"
 db_file: str = "scanweb.sqlite3"
 max_timeout: int = 1000 * 30  # milliseconds
 
@@ -392,7 +399,7 @@ list_of_webs: list[int] = [
     klmanga_net,
     # hachimanga_com,
     # j8jp_com,
-]
+ ]
 
 
 if __name__ == "__main__":

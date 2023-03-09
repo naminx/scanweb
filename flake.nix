@@ -1,6 +1,6 @@
 {
   inputs = {
-    nixpkgs.url = "github:nixos/nixpkgs/nixpkgs-unstable";
+    nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
     flake-parts.url = "github:hercules-ci/flake-parts";
     haskell-flake.url = "github:srid/haskell-flake";
   };
@@ -14,6 +14,23 @@
           overlays = [( self: super: {
             all-cabal-hashes = inputs.all-cabal-hashes;
             my-neovim = self.callPackage ./vim.nix {};
+            my-vscode = super.vscode-with-extensions.override {
+              vscodeExtensions = with super.vscode-extensions; [
+                asvetliakov.vscode-neovim
+                bbenoist.nix
+                haskell.haskell
+                justusadam.language-haskell
+                ms-python.python
+              ]
+              ++ super.vscode-utils.extensionsFromVscodeMarketplace [
+                {
+                  name = "groovylambda";
+                  publisher = "sheaf";
+                  version = "0.1.0";
+                  sha256 = "1j2w6y90qwzaima1gg6vb9fij400hxfbxlla1a55hqjls6157zbf";
+                }
+              ];
+            };
           })];
           config = {
             # for script-monad & wedriver-w3c
@@ -38,6 +55,7 @@
                 lambdabot
                 nodejs
                 my-neovim
+                my-vscode
                 python3Full
                 sqlitebrowser;
               inherit (pkgs.nodePackages)
@@ -46,8 +64,10 @@
                 fourmolu;
               inherit (pkgs.python310Packages)
                 colorama
+                pip
                 pylint
                 selenium
+                virtualenv
                 w3lib;
             };
             #  hlsCheck.enable = true;

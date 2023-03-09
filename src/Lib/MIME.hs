@@ -1,6 +1,6 @@
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE PackageImports #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE NoImplicitPrelude #-}
@@ -10,7 +10,7 @@ module Lib.MIME where
 import Control.Lens
 import Data.Attoparsec.ByteString
 import Data.Attoparsec.ByteString.Base64 (base64)
-import Data.ByteString.Base64 (decodeBase64Lenient)
+import "base64" Data.ByteString.Base64 (decodeBase64Lenient)
 import Data.IMF.Syntax (original)
 import Data.MIME (ContentType, ctSubtype, ctType, parseContentType)
 import qualified Data.Text.Encoding as T (decodeUtf8)
