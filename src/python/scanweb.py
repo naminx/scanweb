@@ -138,10 +138,17 @@ def newer_than(volume: int, chapter: str) -> Callable[[ReleaseInfo], bool]:
     )
 
 
+def mk_dir(file_path: str) -> None:
+    try:
+        mkdir(file_path)
+    except:
+        pass
+
+
 def download_images(
     chrome: WebDriver, relinfo: ReleaseInfo, file_path: str, images: list[str]
 ) -> bool:
-    mkdir(file_path)
+    mk_dir(file_path)
     relinfo: str = (
         f"{gray}chapter{reset} {yellow}{relinfo.chapter}{reset}"
         if hasattr(relinfo, "chapter")
@@ -218,6 +225,16 @@ def update_webs_table(con: Connection, web: int, sentinel: str) -> int:
     return cur.rowcount
 
 
+def get_url(chrome: WebDriver, url: str, is_loaded) -> None:
+    while True:
+        try:
+            chrome.get(url)
+            wait_until(chrome, is_loaded)
+            break
+        except:
+            pass
+
+
 def download_chapter(
     chrome: WebDriver,
     web_info: WebInfo,
@@ -225,8 +242,7 @@ def download_chapter(
     chapter: ReleaseInfo,
     root_dir: str,
 ) -> bool:
-    chrome.get(chapter.url)
-    wait_until(chrome, web_info.is_loaded)
+    get_url(chrome, chapter.url, web_info.is_loaded)
     chap_dir: str = make_chapter_dirname(chapter)
     file_path: str = "/".join([root_dir, comic.folder, chap_dir])
     images: list[str] = chrome.execute_script(web_info.scrape_images)
@@ -243,8 +259,7 @@ def download_comic(
     newer_than_comic: Callable[[ReleaseInfo], bool] = newer_than(
         comic.volume, comic.chapter
     )
-    chrome.get(comic.url)
-    wait_until(chrome, web_info.is_loaded)
+    get_url(chrome, comic.url, web_info.is_loaded)
     chapters: list[tuple] = chrome.execute_script(web_info.scrape_chapters)
     all_releases: list[ReleaseInfo] = map(lambda row: ReleaseInfo(row), chapters)
     new_chapters: list[ReleaseInfo] = [*filter(newer_than_comic, all_releases)]
@@ -276,8 +291,7 @@ def scanweb(chrome: WebDriver, webs: list[int], root_dir: str) -> None:
             page_no: str = f"{gray}[{page}]{reset}"
             print(domain, page_no)
             urlpath: str = chrome.execute_script(web_info.gen_url, page)
-            chrome.get(f"https://{web_info.domain}{urlpath}")
-            wait_until(chrome, web_info.is_loaded)
+            get_url(chrome, f"https://{web_info.domain}{urlpath}", web_info.is_loaded)
             comics: list[tuple] = chrome.execute_script(web_info.scrape_comics)
             pred: Callable[[ReleaseInfo], bool] = (
                 lambda comic: comic.url != web_info.sentinel
@@ -355,6 +369,7 @@ def get_chrome_options(config: str) -> Options:
     user_data_dir += "/.config/google-chrome"
     if config == "replit":
         chrome_options.add_argument("--no-sandbox")
+        chrome_options.add_argument("--headless")
     chrome_options.add_argument(f"--user-data-dir={user_data_dir}")
     chrome_options.binary_location = (
         subprocess.run(["which", "google-chrome-stable"], stdout=subprocess.PIPE)
@@ -363,9 +378,6 @@ def get_chrome_options(config: str) -> Options:
     )
     return chrome_options
 
-
-configs: list[str] = ["wsl", "replit"]
-config: str = configs[0]
 
 first_page: int = 1
 last_page: int = 30
@@ -396,11 +408,13 @@ list_of_webs: list[int] = [
 def rm_comic(comic: int) -> None:
     rm_comic_aux(comic, get_root_dir(config))
 
+
 def new_comic_at(comic: int) -> None:
     new_comic_at_aux(comic, get_root_dir(config))
 
 
 if __name__ == "__main__":
+    config = "wsl"
     chrome_options: Options = get_chrome_options(config)
     with ChromeDriver(chrome_options) as chrome:
         root_dir: str = get_root_dir(config)
