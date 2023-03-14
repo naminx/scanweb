@@ -9,7 +9,19 @@ module App.Config.Linux where
 #if defined(mingw32_HOST_OS)
 #else
 
-import Path (Abs, Dir, Path, absdir, absfile, fromAbsDir, fromAbsFile)
+import Path (
+    Abs,
+    Dir,
+#if MIN_VERSION_GLASGOW_HASKELL(9,2,0,0)
+#else
+    File,
+#endif
+    Path,
+    absdir,
+    absfile,
+    fromAbsDir,
+    fromAbsFile,
+ )
 import RIO
 
 
@@ -28,10 +40,9 @@ userDataDir =
   where
     userDataDir' =
 #if MIN_VERSION_GLASGOW_HASKELL(9,2,0,0)
-        -- [absdir|/home/namin/.config/chromium/|]
         [absdir|/home/namin/.config/google-chrome|]
 #else
-        [absdir|/home/runner/scanweb/.config/chromium/|]
+        [absdir|/home/runner/scanweb/.config/google-chrome/|]
 #endif
 
 
@@ -41,10 +52,9 @@ chromeExe =
   where
     chromeExe' =
 #if MIN_VERSION_GLASGOW_HASKELL(9,2,0,0)
-        -- [absfile|/run/current-system/sw/bin/chromium|]
         [absfile|/run/current-system/sw/bin/google-chrome-stable|]
 #else
-        [absfile|/nix/store/ia69plrrvn7czdhn3flq1ll39i92ixab-chromium-92.0.4515.159/bin/chromium|]
+        [absfile|/nix/store/vmnmzm12zzqbr73kkbz213zf9d0qv0q8-google-chrome-92.0.4515.159/bin/google-chrome-stable|]
 #endif
 
 
@@ -54,9 +64,9 @@ chromeDriverExe =
   where
     chromeDriverExe' =
 #if MIN_VERSION_GLASGOW_HASKELL(9,2,0,0)
-      [absfile|/run/current-system/sw/bin/chromedriver|]
+        [absfile|/run/current-system/sw/bin/chromedriver|]
 #else
-      [absfile|/nix/store/3w27rhw8rwxhf915b7gqlflf02cnqbjv-chromedriver-92.0.4515.107/bin/chromedriver|]
+        [absfile|/nix/store/3w27rhw8rwxhf915b7gqlflf02cnqbjv-chromedriver-92.0.4515.107/bin/chromedriver|]
 #endif
 
 #endif

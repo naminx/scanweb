@@ -4,12 +4,22 @@ with pkgs;
 let
   fish-vim = vimUtils.buildVimPluginFrom2Nix {
     pname = "fish-vim";
-    version = "2022-05-12";
+    version = "2023-02-04";
     src = fetchFromGitHub {
       owner = "nickeb96";
       repo = "fish.vim";
-      rev = "60492e9f7577e74a159e2de504607b36da45c50e";
-      sha256 = "sha256-/dtesa2uZpUA6qadcdtkC4pxQusDyWJEYAf/zSZB3Uk=";
+      rev = "363a03469d2b774e50089ed38efaf4d3a346b561";
+      sha256 = "0jfx84kcvzq7c1265j83xd1732hbckdp37d6x809armfmnqmxnzx";
+    };
+  };
+  deferred-clipboard = vimUtils.buildVimPluginFrom2Nix {
+    pname = "deferred-clipboard";
+    version = "2023-03-15";
+    src = fetchFromGitHub {
+      owner = "naminx";
+      repo = "deferred-clipboard.nvim";
+      rev = "eaad79a6a381048bdbebcd63ec3b1df2f6503f92";
+      sha256 = "15khihnv3rmbn28w3clw27cnn3m5iqhjyfcmcply870hbg5g7m5a";
     };
   };
   myVimPlugins = with vimPlugins;
@@ -26,6 +36,7 @@ let
       vim-nix # nix source file highlight
       vim-ormolu # format haskell source file when saving
       vim-prettier
+      deferred-clipboard
     ];
 in
   neovim.override {

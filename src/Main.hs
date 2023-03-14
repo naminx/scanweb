@@ -31,7 +31,6 @@ import qualified Data.Text.Lazy.IO as TL
 import Data.Tuple.Extra (dupe)
 import Database.Esqueleto.Experimental hiding ((<&>), (^.))
 import qualified Database.Esqueleto.Experimental as ES
-import Database.Esqueleto.PostgreSQL (values)
 import Import hiding (catMaybes, from, link, mapMaybe, on)
 import Init
 import Options
@@ -75,6 +74,10 @@ import Text.URI.QQ (host, uri, username)
 import Web.Api.WebDriver as WD
 import Witherable
 import qualified Prelude
+
+#if MIN_VERSION_GLASGOW_HASKELL(9,2,0,0)
+import Database.Esqueleto.PostgreSQL (values)
+#endif
 
 
 main :: IO ()

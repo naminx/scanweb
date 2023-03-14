@@ -20,7 +20,7 @@ let g:clipboard = {
                 \      '+': 'win32yank.exe -o --lf',
                 \      '*': 'win32yank.exe -o --lf',
                 \   },
-                \   'cache_enabled': 0,
+                \   'cache_enabled': 1,
                 \ }
 
 if has("clipboard")
