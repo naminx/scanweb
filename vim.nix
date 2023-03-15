@@ -9,7 +9,7 @@ let
       owner = "nickeb96";
       repo = "fish.vim";
       rev = "363a03469d2b774e50089ed38efaf4d3a346b561";
-      sha256 = "0jfx84kcvzq7c1265j83xd1732hbckdp37d6x809armfmnqmxnzx";
+      sha256 = "15khihnv3rmbn28w3clw27cnn3m5iqhjyfcmcply870hbg5g7m5a";
     };
   };
   deferred-clipboard = vimUtils.buildVimPluginFrom2Nix {
@@ -19,7 +19,7 @@ let
       owner = "naminx";
       repo = "deferred-clipboard.nvim";
       rev = "eaad79a6a381048bdbebcd63ec3b1df2f6503f92";
-      sha256 = "15khihnv3rmbn28w3clw27cnn3m5iqhjyfcmcply870hbg5g7m5a";
+      sha256 = "0jfx84kcvzq7c1265j83xd1732hbckdp37d6x809armfmnqmxnzx";
     };
   };
   myVimPlugins = with vimPlugins;
