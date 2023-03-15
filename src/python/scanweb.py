@@ -164,7 +164,7 @@ def download_images(
     else:
         for n, image_url in enumerate(images, start=1):
             done: bool = False
-            data_uri: str = chrome.execute_async_script(xml_http_request_js, image_url)
+            data_uri: str = get_data_uri(chrome, image_url)
             data: ParseDataURIResult = parse_data_uri(data_uri)
             base: str = str(n).zfill(3)
             ext: str = data.media_type.partition("/")[2]
@@ -225,7 +225,7 @@ def update_webs_table(con: Connection, web: int, sentinel: str) -> int:
     return cur.rowcount
 
 
-def get_url(chrome: WebDriver, url: str, is_loaded) -> None:
+def get_url(chrome: WebDriver, url: str, is_loaded: str) -> None:
     while True:
         try:
             chrome.get(url)
@@ -233,6 +233,16 @@ def get_url(chrome: WebDriver, url: str, is_loaded) -> None:
             break
         except:
             pass
+
+
+def get_data_uri(chrome: WebDriver, image_url: str) -> str:
+    while True:
+        try:
+            data_uri: str = chrome.execute_async_script(xml_http_request_js, image_url)
+            break
+        except:
+            pass
+    return data_uri
 
 
 def download_chapter(
