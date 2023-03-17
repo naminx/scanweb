@@ -7,6 +7,7 @@
 // @match        https://hachimanga.com/*
 // @match        https://j8jp.com/*
 // @match        https://j9jp.com/*
+// @match        https://hachiraw.com/*
 // @match        https://klmanga.com/*
 // @match        https://klmanga.net/*
 // @match        https://manga1001.in/chapters/*
@@ -40,6 +41,7 @@
 // @connect      justaquickbite.com
 // @connect      klimv1.xyz
 // @connect      h4.klimv1.xyz
+// @connect      image.hachimanga.com
 // @connect      manga1000.top
 // @connect      mangahatachi.com
 // @connect      megabyteblaze.me
@@ -123,4 +125,3 @@ async function getXmlHttpRequest(event) {
         // Do nothing
     }
 }
-

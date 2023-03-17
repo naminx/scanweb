@@ -12,7 +12,7 @@ let
       sha256 = "15khihnv3rmbn28w3clw27cnn3m5iqhjyfcmcply870hbg5g7m5a";
     };
   };
-  deferred-clipboard = vimUtils.buildVimPluginFrom2Nix {
+  deferred-clipboard-x = vimUtils.buildVimPluginFrom2Nix {
     pname = "deferred-clipboard";
     version = "2023-03-15";
     src = fetchFromGitHub {
@@ -36,7 +36,7 @@ let
       vim-nix # nix source file highlight
       vim-ormolu # format haskell source file when saving
       vim-prettier
-      deferred-clipboard
+      # deferred-clipboard
     ];
 in
   neovim.override {

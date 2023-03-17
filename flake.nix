@@ -20,7 +20,6 @@
                 bbenoist.nix
                 haskell.haskell
                 justusadam.language-haskell
-                ms-python.python
               ]
               ++ super.vscode-utils.extensionsFromVscodeMarketplace [
                 {

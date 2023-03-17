@@ -106,13 +106,11 @@ import Text.URI.Lens (
  )
 import Web.Api.WebDriver
     ( ContextId,
-      closeWindow,
       executeAsyncScript,
       executeScript,
       getWindowHandle,
       getWindowHandles,
       navigateToStealth,
-      switchToWindow,
       execWebDriverT,
       WebDriverT,
       SessionId )
@@ -343,8 +341,14 @@ tryClickAndDownloadComic ::
     (HasStateRef s env, HasApp s, HasLogFunc s, HasProcessContext s) =>
     Try (URI, Maybe ReleaseInfo) ->
     RIO env (Try URI)
-tryClickAndDownloadComic args =
-    tryAny $ clickAndDownloadComic args
+tryClickAndDownloadComic args = do
+    result <- tryAny $ clickAndDownloadComic args
+    when (isLeft result) $
+        runSimpleApp $
+            logError $
+                display $
+                    vivid Red <> T.pack (displayException $ result ^?! _Left)
+    return result
 
 
 clickAndDownloadComic ::
@@ -622,15 +626,16 @@ clickAndScanComic = do
                     <> (", Ch." <> T.pack (show chapterLast) <> ")")
                )
     comicUrl <- currentComicUrl <%= id
-    newReleaseWin <- runWd getWindowHandle
-    newWin <- execNewWin (clickAnchorTargetBlank comicUrl) []
-    runWd $ switchToWindow newWin
+    runWd $ navigateToStealth $ render comicUrl
     waitForLoaded
     maybeRelInfo <- newReleaseInfo <%= id
     scrapeLatestScript <- currentWebInfo . scrapeLatest <%= id
     latestChapUrl <-
-        runWd (executeScript scrapeLatestScript [])
-            <&> preview (_String . to Just . tryParseURI)
+        fromRight (throwM LatestChapterNotFound)
+            <$> tryAny
+                    ( runWd (executeScript scrapeLatestScript [])
+                        <&> preview (_String . to Just . tryParseURI)
+                    )
     let newRelease =
             zipWith
                 (liftA2 (,))
@@ -658,7 +663,6 @@ clickAndScanComic = do
                     (\n (c, u) -> (c, u, u, length newReleases - n))
                 <&> applyRelativeTo comicUrl _2
     result <- traverse tryDownloadRelease chapters
-    runWd $ closeWindow >> switchToWindow newReleaseWin
     when (any (has _Left) result) $
         throwM SomeChaptersNotDownloaded
     return $ lastOf (takingWhile isRight folded . _Right) result
@@ -710,9 +714,7 @@ downloadRelease (relInfo, absUrl, _relUrl, _count) =
         comicFolder <- currentComicInfo . _2 <%= id
         let releaseDir = releaseFolder relInfo
             targetFolder = rootFolder </> comicFolder </> releaseDir
-        comicWin <- runWd getWindowHandle
-        newWin <- execNewWin (clickAnchorTargetBlank absUrl) []
-        runWd $ switchToWindow newWin
+        runWd $ navigateToStealth $ render absUrl
         waitForLoaded
         images <- waitForImagesToLoad
         when (null images) $
@@ -727,7 +729,6 @@ downloadRelease (relInfo, absUrl, _relUrl, _count) =
             bracketDownloadImages $
                 traverse tryDownloadImage $
                     zip images ((targetFolder </>) <$> runningFileName)
-        runWd $ closeWindow >> switchToWindow comicWin
         traverseOf_ (each . _Left) printExceptionEx result
         when (any (has _Left) result) $
             throwM SomeImagesNotDownloaded

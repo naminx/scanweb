@@ -77,6 +77,15 @@ instance Exception ComicLinksNotFound where
         "Parse failed, comic links not found"
 
 
+data LatestChapterNotFound = LatestChapterNotFound
+    deriving (Eq, Show)
+
+
+instance Exception LatestChapterNotFound where
+    displayException LatestChapterNotFound =
+        "Parse failed, latest chapter not found"
+
+
 data ChapterLinksNotFound = ChapterLinksNotFound
     deriving (Eq, Show)
 
