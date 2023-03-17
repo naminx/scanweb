@@ -12,7 +12,7 @@ from selenium.webdriver.chrome.webdriver import WebDriver
 from sqlite3 import Connection, Cursor
 from typing import Callable
 from typing import List
-from w3lib.url import ParseDataURIResult, parse_data_uri
+# from w3lib.url import ParseDataURIResult, parse_data_uri
 import os
 import sqlite3
 import subprocess
