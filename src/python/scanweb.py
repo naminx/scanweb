@@ -12,7 +12,7 @@ from selenium.webdriver.chrome.webdriver import WebDriver
 from sqlite3 import Connection, Cursor
 from typing import Callable
 from typing import List
-# from w3lib.url import ParseDataURIResult, parse_data_uri
+from w3lib.url import ParseDataURIResult, parse_data_uri
 import os
 import sqlite3
 import subprocess
@@ -365,7 +365,9 @@ def get_root_dir(config: str) -> str:
     if config == "wsl":
         root_dir = "/mnt/m/Documents/Comics"
     elif config == "replit":
-        root_dir = "/home/runner/pyscan/comics"
+        home: str = os.getenv("HOME")
+        slug: str = os.getenv("REPL_SLUG")
+        root_dir = f"{home}/{slug}/comics"
     else:
         raise Exception('Unknown configuration. Expecting "wsl" or "replit".')
     return root_dir
@@ -379,7 +381,8 @@ def get_chrome_options(config: str) -> Options:
     user_data_dir += "/.config/google-chrome"
     if config == "replit":
         chrome_options.add_argument("--no-sandbox")
-        chrome_options.add_argument("--headless")
+        chrome_options.add_argument("--disable-dev-shm-usage")
+        # chrome_options.add_argument("--headless")
     chrome_options.add_argument(f"--user-data-dir={user_data_dir}")
     chrome_options.binary_location = (
         subprocess.run(["which", "google-chrome-stable"], stdout=subprocess.PIPE)

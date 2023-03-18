@@ -12,10 +12,6 @@ module App.Config.Linux where
 import Path (
     Abs,
     Dir,
-#if MIN_VERSION_GLASGOW_HASKELL(9,2,0,0)
-#else
-    File,
-#endif
     Path,
     absdir,
     absfile,
@@ -54,7 +50,7 @@ chromeExe =
 #if MIN_VERSION_GLASGOW_HASKELL(9,2,0,0)
         [absfile|/run/current-system/sw/bin/google-chrome-stable|]
 #else
-        [absfile|/nix/store/vmnmzm12zzqbr73kkbz213zf9d0qv0q8-google-chrome-92.0.4515.159/bin/google-chrome-stable|]
+        [absfile|/nix/store/k2rzszkc15aiyclc5p7063032jmg1dij-google-chrome-108.0.5359.94/bin/google-chrome-stable|]
 #endif
 
 
@@ -66,7 +62,7 @@ chromeDriverExe =
 #if MIN_VERSION_GLASGOW_HASKELL(9,2,0,0)
         [absfile|/run/current-system/sw/bin/chromedriver|]
 #else
-        [absfile|/nix/store/3w27rhw8rwxhf915b7gqlflf02cnqbjv-chromedriver-92.0.4515.107/bin/chromedriver|]
+        [absfile|/nix/store/i85kwq4r351qb5m7mrkl2grv34689l6b-chromedriver-108.0.5359.71/bin/chromedriver|]
 #endif
 
 #endif
