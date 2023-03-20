@@ -1,6 +1,7 @@
 //============================================================================
 // common: minified
 //============================================================================
+var min = "var d=document,xpaths=a=>{var e;return Array.from({length:(e=d.evaluate(a,d,null,7)).snapshotLength},(a,t)=>e.snapshotItem(t))},xpath=(a,e=d)=>d.evaluate(a,e,null,9).singleNodeValue;"
 var d = document;
 var xpaths = (p) =>
   ((r) =>
