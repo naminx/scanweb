@@ -14,35 +14,35 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE NoImplicitPrelude #-}
 
-module Lib.RIO (
-    module RIO,
-    logSticky,
-    logStickyDone,
-) where
+module Lib.RIO
+    ( module RIO
+    , logSticky
+    , logStickyDone
+    ) where
 
 import Control.Lens ((<%=))
-import RIO hiding (
-    ASetter,
-    ASetter',
-    Getting,
-    Lens,
-    Lens',
-    SimpleGetter,
-    lens,
-    logSticky,
-    logStickyDone,
-    over,
-    preview,
-    set,
-    sets,
-    to,
-    view,
-    (%~),
-    (.~),
-    (^.),
-    (^..),
-    (^?),
- )
+import RIO hiding
+    ( ASetter
+    , ASetter'
+    , Getting
+    , Lens
+    , Lens'
+    , SimpleGetter
+    , lens
+    , logSticky
+    , logStickyDone
+    , over
+    , preview
+    , set
+    , sets
+    , to
+    , view
+    , (%~)
+    , (.~)
+    , (^.)
+    , (^..)
+    , (^?)
+    )
 
 import qualified RIO (logSticky, logStickyDone)
 import RIO.Process (HasProcessContext (..))

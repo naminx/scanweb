@@ -50,6 +50,7 @@
               inherit (pkgs)
                 black
                 chromedriver
+                dos2unix
                 google-chrome
                 lambdabot
                 nodejs

@@ -14,11 +14,11 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE NoImplicitPrelude #-}
 
-module Lib.Console (
-    vivid,
-    dull,
-    resetSGR,
-) where
+module Lib.Console
+    ( vivid
+    , dull
+    , resetSGR
+    ) where
 
 import RIO
 import qualified RIO.Text as T (pack)

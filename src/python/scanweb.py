@@ -226,29 +226,21 @@ def update_webs_table(con: Connection, web: int, sentinel: str) -> int:
 
 
 def get_url(chrome: WebDriver, url: str, is_loaded: str) -> None:
-    count: int = 1
     while True:
         try:
             chrome.get(url)
             wait_until(chrome, is_loaded)
             break
         except:
-            if count >= 5:
-                sys.exit("Navigation failed for 5 times")
-            count = count + 1
             pass
 
 
 def get_data_uri(chrome: WebDriver, image_url: str) -> str:
-    count: int = 1
     while True:
         try:
             data_uri: str = chrome.execute_async_script(xml_http_request_js, image_url)
             break
         except:
-            if count >= 5:
-                sys.exit("Download failed for 5 times")
-            count = count + 1
             pass
     return data_uri
 
@@ -435,9 +427,7 @@ def new_comic_at(comic: int) -> None:
 
 
 if __name__ == "__main__":
-    config = "wsl"
-    if os.getenv("REPL_SLUG") != None:
-        config = "replit"
+    config = "replit"
     chrome_options: Options = get_chrome_options(config)
     with ChromeDriver(chrome_options) as chrome:
         root_dir: str = get_root_dir(config)

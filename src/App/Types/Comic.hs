@@ -6,12 +6,12 @@
 module App.Types.Comic where
 
 import Data.Aeson (FromJSON (..), ToJSON (..))
-import Database.Esqueleto.Experimental (
-    PersistField (..),
-    PersistFieldSql (..),
-    PersistValue (PersistInt64),
-    SqlType (SqlInt64),
- )
+import Database.Esqueleto.Experimental
+    ( PersistField (..)
+    , PersistFieldSql (..)
+    , PersistValue (PersistInt64)
+    , SqlType (SqlInt64)
+    )
 import Lib
 import qualified RIO.Text as T (pack)
 import Web.Internal.HttpApiData (FromHttpApiData (..), ToHttpApiData (..))

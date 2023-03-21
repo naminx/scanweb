@@ -15,9 +15,10 @@ import qualified Text.Megaparsec as MP (try)
 import Text.Megaparsec.Char.Lexer (decimal)
 import Text.URI (mkURI)
 
---
+
 timestamp :: IsString s => s
 timestamp = __TIMESTAMP__
+
 
 parseOptions :: IO Options
 parseOptions = do
@@ -66,6 +67,7 @@ parseOptions = do
             empty
     return cliOptions
 
+
 modeScanWebs :: Parser AppMode
 modeScanWebs =
     ScanWebs
@@ -80,6 +82,7 @@ modeScanWebs =
                         <> "(-w for list of known webs)"
                     )
             )
+
 
 modeUpdateComic :: Parser AppMode
 modeUpdateComic =
@@ -96,6 +99,7 @@ modeUpdateComic =
                     )
             )
 
+
 modeDownloadRelease :: Parser AppMode
 modeDownloadRelease =
     DownloadRelease
@@ -110,6 +114,7 @@ modeDownloadRelease =
                     )
             )
 
+
 modeDownloadAddress :: Parser AppMode
 modeDownloadAddress =
     DownloadAddress
@@ -121,6 +126,7 @@ modeDownloadAddress =
                 <> help "Download VOLUME/CHAPTER at a specific address"
             )
 
+
 mkTupleWebComicMaybeRelInfo :: Text -> Either SomeException (Web, Comic, Maybe ReleaseInfo)
 mkTupleWebComicMaybeRelInfo = parseEither $ do
     _ <- optional (single ' ')
@@ -130,6 +136,7 @@ mkTupleWebComicMaybeRelInfo = parseEither $ do
     relInfo <- optional releaseInfo
     return (web, Comic comic, relInfo)
 
+
 mkTupleWebComicRelInfo :: Text -> Either SomeException (Web, Comic, ReleaseInfo)
 mkTupleWebComicRelInfo = parseEither $ do
     _ <- optional (single ' ')
@@ -138,6 +145,7 @@ mkTupleWebComicRelInfo = parseEither $ do
     comic <- decimal
     relInfo <- releaseInfo
     return (web, Comic comic, relInfo)
+
 
 releaseInfo :: TextParser ReleaseInfo
 releaseInfo = MP.try episodes <|> MP.try episode <|> book
@@ -157,6 +165,7 @@ releaseInfo = MP.try episodes <|> MP.try episode <|> book
         chapterEnd <- comicChapter
         return $ Episodes (chapterBegin, chapterEnd)
 
+
 modeListWebs :: Parser AppMode
 modeListWebs =
     flag'
@@ -165,6 +174,7 @@ modeListWebs =
             <> long "webs"
             <> help "Show list of known webs"
         )
+
 
 modeListComics :: Parser AppMode
 modeListComics =
@@ -175,6 +185,7 @@ modeListComics =
             <> help "Show list of known comics"
         )
 
+
 modeFallback :: Parser AppMode
 modeFallback =
     flag
@@ -182,8 +193,10 @@ modeFallback =
         (ScanWebs $ Web <$> [unWeb minBoundWeb .. unWeb maxBoundWeb])
         mempty
 
+
 singleWeb :: TextParser Web
 singleWeb = Web <$> decimal
+
 
 webRange :: TextParser [Web]
 webRange = do
@@ -192,9 +205,11 @@ webRange = do
     lastWeb <- singleWeb
     return $ Web <$> [unWeb firstWeb .. unWeb lastWeb]
 
+
 webList :: TextParser [Web]
 webList = do
     fmap concat $ (MP.try webRange <|> fmap (: []) singleWeb) `sepBy` single ','
+
 
 mkWebList :: Text -> Either SomeException [Web]
 mkWebList = parseEither webList

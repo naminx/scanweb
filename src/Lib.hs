@@ -1,16 +1,16 @@
 {-# LANGUAGE NoImplicitPrelude #-}
 
-module Lib (
-    module Lib.Console,
-    module Lib.Esqueleto,
-    module Lib.Extra,
-    module Lib.Lens,
-    module Lib.MIME,
-    module Lib.Megaparsec,
-    module Lib.RIO,
-    module Lib.URI,
-    module Lib.WebDriver,
-) where
+module Lib
+    ( module Lib.Console
+    , module Lib.Esqueleto
+    , module Lib.Extra
+    , module Lib.Lens
+    , module Lib.MIME
+    , module Lib.Megaparsec
+    , module Lib.RIO
+    , module Lib.URI
+    , module Lib.WebDriver
+    ) where
 
 import Lib.Console
 import Lib.Esqueleto

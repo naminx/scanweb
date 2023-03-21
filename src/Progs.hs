@@ -29,11 +29,11 @@ _dummy =
         (pPrint (0 :: Int) :: IO ())
 
 
-progScanWebs
-    :: forall env s
-     . (HasStateRef s env, HasApp s, HasLogFunc s, HasProcessContext s)
-    => [Web]
-    -> RIO env ()
+progScanWebs ::
+    forall env s.
+    (HasStateRef s env, HasApp s, HasLogFunc s, HasProcessContext s) =>
+    [Web] ->
+    RIO env ()
 progScanWebs =
     traverse_ $
         [ scanWeb
@@ -43,11 +43,11 @@ progScanWebs =
             ^?! ix 0
 
 
-progUpdateComic
-    :: forall env s
-     . (HasStateRef s env, HasApp s, HasLogFunc s, HasProcessContext s)
-    => (Web, Comic, Maybe ReleaseInfo)
-    -> RIO env ()
+progUpdateComic ::
+    forall env s.
+    (HasStateRef s env, HasApp s, HasLogFunc s, HasProcessContext s) =>
+    (Web, Comic, Maybe ReleaseInfo) ->
+    RIO env ()
 progUpdateComic (web, comic, relInfo) = do
     setWebTo web
     setComicTo comic
@@ -62,11 +62,11 @@ progUpdateComic (web, comic, relInfo) = do
             updateComicTable comic chapter
 
 
-progDownloadRelease
-    :: forall env s
-     . (HasStateRef s env, HasApp s, HasLogFunc s, HasProcessContext s)
-    => (Web, Comic, ReleaseInfo)
-    -> RIO env ()
+progDownloadRelease ::
+    forall env s.
+    (HasStateRef s env, HasApp s, HasLogFunc s, HasProcessContext s) =>
+    (Web, Comic, ReleaseInfo) ->
+    RIO env ()
 progDownloadRelease (web, comic, relInfo) = do
     setWebTo web
     setComicTo comic
@@ -76,11 +76,11 @@ progDownloadRelease (web, comic, relInfo) = do
         Right _ -> return ()
 
 
-progDownloadChapter
-    :: forall env s
-     . (HasStateRef s env, HasApp s, HasLogFunc s, HasProcessContext s)
-    => URI
-    -> RIO env ()
+progDownloadChapter ::
+    forall env s.
+    (HasStateRef s env, HasApp s, HasLogFunc s, HasProcessContext s) =>
+    URI ->
+    RIO env ()
 progDownloadChapter url = do
     web <- urlToWeb url >>= maybe (throwM $ UnknownWeb $ renderStr url) return
     setWebTo web

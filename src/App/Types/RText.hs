@@ -4,17 +4,17 @@
 {-# LANGUAGE NoImplicitPrelude #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module App.Types.RText (
-    RText,
-    RTextLabel (Username, Password),
-) where
+module App.Types.RText
+    ( RText
+    , RTextLabel (Username, Password)
+    ) where
 
-import Database.Esqueleto.Experimental (
-    PersistField (..),
-    PersistFieldSql (..),
-    PersistValue (PersistText),
-    SqlType (SqlString),
- )
+import Database.Esqueleto.Experimental
+    ( PersistField (..)
+    , PersistFieldSql (..)
+    , PersistValue (PersistText)
+    , SqlType (SqlString)
+    )
 import qualified Database.Esqueleto.Internal.Internal as ES (SqlString)
 import Lib
 import qualified RIO.Text as T (pack)

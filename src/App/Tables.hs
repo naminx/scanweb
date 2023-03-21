@@ -1,25 +1,21 @@
-{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE OverloadedRecordDot #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE NoImplicitPrelude #-}
 
-#if MIN_VERSION_GLASGOW_HASKELL(9,2,0,0)
-{-# LANGUAGE OverloadedRecordDot #-}
-#endif
-
 module App.Tables where
 
-import Database.Esqueleto.Experimental (
-    InnerJoin (InnerJoin),
-    SqlBackend,
-    Value (unValue),
-    from,
-    on,
-    select,
-    table,
-    (:&) ((:&)),
-    (==.),
- )
+import Database.Esqueleto.Experimental
+    ( InnerJoin (InnerJoin)
+    , SqlBackend
+    , Value (unValue)
+    , from
+    , on
+    , select
+    , table
+    , (:&) ((:&))
+    , (==.)
+    )
 import Import hiding (domain, from, on, (^.))
 import qualified RIO.List as L (foldl)
 import qualified RIO.Map as Map (fromList)
@@ -33,7 +29,6 @@ queryWebTable sqlBackend = do
     rows <- runSql sqlBackend $
         select $ do
             webs <- from $ table @Webs
-#if MIN_VERSION_GLASGOW_HASKELL(9,2,0,0)
             pure
                 ( webs.web
                 , webs.domain
@@ -47,21 +42,6 @@ queryWebTable sqlBackend = do
                 , webs.scrapeChapters
                 , webs.scrapeImages
                 )
-#else
-            pure
-                ( webs .^ WebsWeb
-                , webs .^ WebsDomain
-                , webs .^ WebsUsername
-                , webs .^ WebsPassword
-                , webs .^ WebsSentinel
-                , webs .^ WebsGenUrl
-                , webs .^ WebsIsLoaded
-                , webs .^ WebsScrapeComics
-                , webs .^ WebsScrapeLatest
-                , webs .^ WebsScrapeChapters
-                , webs .^ WebsScrapeImages
-                )
-#endif
     webs <- L.foldl tryParseRow (return []) rows
     return $ Map.fromList webs
   where
@@ -136,23 +116,12 @@ queryWebTable sqlBackend = do
 queryComicTable :: (MonadUnliftIO m, MonadThrow m) => SqlBackend -> m ComicTable
 queryComicTable sqlBackend = do
     rows <- runSql sqlBackend $
-#if MIN_VERSION_GLASGOW_HASKELL(9,2,0,0)
         select $ do
             comics :& _urls <-
-                from $
-                    table @Comics `InnerJoin` table @Urls
-                        `on` (\(comics :& urls) -> comics.comic ==. urls.comic)
+                from
+                    $ table @Comics `InnerJoin` table @Urls
+                    `on` (\(comics :& urls) -> comics.comic ==. urls.comic)
             pure (comics.comic, comics.title, comics.folder, comics.volume, comics.chapter)
-#else
-        select $ do
-            comics :& _urls <-
-                from $
-                    table @Comics `InnerJoin` table @Urls
-                        `on` (\(comics :& urls) -> comics .^ ComicsComic ==. urls .^ UrlsComic)
-            pure ( comics .^ ComicsComic, comics .^ ComicsTitle
-                 , comics .^ ComicsFolder
-                 , comics .^ ComicsVolume, comics .^ ComicsChapter)
-#endif
     comics <- L.foldl tryParseRow (return []) rows
     return $ Map.fromList comics
   where
@@ -189,21 +158,12 @@ queryComicTable sqlBackend = do
 queryUrlTable :: (MonadUnliftIO m, MonadThrow m) => SqlBackend -> m UrlTable
 queryUrlTable sqlBackend = do
     rows <- runSql sqlBackend $
-#if MIN_VERSION_GLASGOW_HASKELL(9,2,0,0)
         select $ do
             urls :& webs <-
-                from $
-                    table @Urls `InnerJoin` table @Webs
-                        `on` (\(urls :& webs) -> urls.web ==. webs.web)
+                from
+                    $ table @Urls `InnerJoin` table @Webs
+                    `on` (\(urls :& webs) -> urls.web ==. webs.web)
             pure (urls.web, urls.comic, webs.domain, urls.path)
-#else
-        select $ do
-            urls :& webs <-
-                from $
-                    table @Urls `InnerJoin` table @Webs
-                        `on` (\(urls :& webs) -> urls .^ UrlsWeb ==. webs .^ WebsWeb)
-            pure (urls .^ UrlsWeb, urls .^ UrlsComic, webs .^ WebsDomain, urls .^ UrlsPath)
-#endif
     urls <- L.foldl tryParseRow (return []) rows
     return $ Map.fromList urls
   where

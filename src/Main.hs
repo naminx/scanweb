@@ -1,9 +1,6 @@
-{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
-#if MIN_VERSION_GLASGOW_HASKELL(9,2,0,0)
 {-# LANGUAGE OverloadedRecordDot #-}
-#endif
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE RankNTypes #-}
@@ -11,7 +8,6 @@
 {-# LANGUAGE NoImplicitPrelude #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
-
 
 module Main where
 
@@ -31,6 +27,7 @@ import qualified Data.Text.Lazy.IO as TL
 import Data.Tuple.Extra (dupe)
 import Database.Esqueleto.Experimental hiding ((<&>), (^.))
 import qualified Database.Esqueleto.Experimental as ES
+import Database.Esqueleto.PostgreSQL (values)
 import Import hiding (catMaybes, from, link, mapMaybe, on)
 import Init
 import Options
@@ -48,36 +45,32 @@ import System.Directory (getCurrentDirectory, makeAbsolute)
 import System.Process (CreateProcess (..), StdStream (..), withCreateProcess)
 import qualified System.Process as P
 import System.Time.Extra (sleep)
-import Text.Megaparsec (
-    Parsec,
-    ShowErrorComponent (..),
-    eof,
-    many,
-    parseTest,
-    some,
-    try,
- )
+import Text.Megaparsec
+    ( Parsec
+    , ShowErrorComponent (..)
+    , eof
+    , many
+    , parseTest
+    , some
+    , try
+    )
 import Text.Megaparsec.Char (space1, string)
 import Text.Pretty.Simple (pPrint)
 import Text.Printf
 import Text.RawString.QQ (r)
-import Text.URI (
-    Authority (Authority),
-    UserInfo (UserInfo),
-    mkURI,
-    render,
-    renderStr,
-    unRText,
- )
+import Text.URI
+    ( Authority (Authority)
+    , UserInfo (UserInfo)
+    , mkURI
+    , render
+    , renderStr
+    , unRText
+    )
 import Text.URI.Lens (authHost, uriAuthority)
 import Text.URI.QQ (host, uri, username)
 import Web.Api.WebDriver as WD
 import Witherable
 import qualified Prelude
-
-#if MIN_VERSION_GLASGOW_HASKELL(9,2,0,0)
-import Database.Esqueleto.PostgreSQL (values)
-#endif
 
 
 main :: IO ()
@@ -158,15 +151,14 @@ queryComics links =
     bracket (newSqlBackend defaultDbFile) (liftIO . close') $
         (map unValues <$>) . runSqlConn query
   where
-#if MIN_VERSION_GLASGOW_HASKELL(9,2,0,0)
     query = select $ do
         webs :& urls :& comics <-
-            from $
-                ( table @Webs `InnerJoin` table @Urls
-                    `on` (\(webs :& urls) -> webs.web ==. urls.web)
-                )
+            from
+                $ ( table @Webs `InnerJoin` table @Urls
+                        `on` (\(webs :& urls) -> webs.web ==. urls.web)
+                  )
                     `InnerJoin` table @Comics
-                    `on` (\(_ :& urls :& comics) -> urls.comic ==. comics.comic)
+                `on` (\(_ :& urls :& comics) -> urls.comic ==. comics.comic)
         let fullUrl = val [uri|https://|] ++. castString webs.domain ++. urls.path
         where_ $ fullUrl `in_` valList links
         orderBy $ map (asc . (fullUrl !=.) . val) links
@@ -175,83 +167,61 @@ queryComics links =
             , fullUrl
             , (comics.title, comics.folder, comics.volume, comics.chapter)
             )
-#else
-    query = select $ do
-        webs :& urls :& comics <-
-            from $
-                ( table @Webs `InnerJoin` table @Urls
-                    `on` (\(webs :& urls) -> webs .^ WebsWeb ==. urls .^ UrlsWeb)
-                )
-                    `InnerJoin` table @Comics
-                    `on` (\(_ :& urls :& comics) -> urls .^ UrlsComic ==. comics .^ ComicsComic)
-        let fullUrl = val [uri|https://|] ++. castString (webs .^ WebsDomain) ++. urls .^ UrlsPath
-        where_ $ fullUrl `in_` valList links
-        orderBy $ map (asc . (fullUrl !=.) . val) links
-        pure
-            ( urls .^ UrlsComic
-            , fullUrl
-            , (comics .^ ComicsTitle, comics .^ ComicsFolder, comics .^ ComicsVolume, comics .^ ComicsChapter)
-            )
-#endif
     unValues (comic, uri_, comicInfo) =
         (unValue comic, unValue uri_, unValues' comicInfo)
       where
         unValues' (title, path, volume, chapter) =
             (unValue title, unValue path, unValue volume, unValue chapter)
 
+
 queryComic :: MonadUnliftIO m => Int -> m (Maybe ComicInfo)
 queryComic c =
     bracket (newSqlBackend defaultDbFile) (liftIO . close') $
         (fmap unValues . preview _head <$>) . runSqlConn query
   where
-#if MIN_VERSION_GLASGOW_HASKELL(9,2,0,0)
     query = select $ do
         comics <- from $ table @Comics
         where_ $ comics.comic ==. val (Comic c)
         pure (comics.title, comics.folder, comics.volume, comics.chapter)
-#else
-    query = select $ do
-        comics <- from $ table @Comics
-        where_ $ comics .^ ComicsComic ==. val (Comic c)
-        pure (comics .^ ComicsTitle, comics .^ ComicsFolder, comics .^ ComicsVolume, comics .^ ComicsChapter)
-#endif
     unValues (title, path, volume, chapter) =
         (unValue title, unValue path, unValue volume, unValue chapter)
+
 
 queryWeb :: (MonadThrow m, MonadUnliftIO m) => URI -> m WebInfo
 queryWeb url =
     bracket (newSqlBackend defaultDbFile) (liftIO . close') $
-       runSqlConn query
+        runSqlConn query
             >>> fmap (preview $ _head . to toWebInfo)
             >>> (>>= maybe throwException return)
   where
     throwException = throwM $ UnknownWeb $ renderStr url
     toWebInfo
         ( webDomain_
-        , webUsername
-        , webPassword
-        , webSentinel
-        , webGenUrl
-        , webIsLoaded
-        , webScrapeComics
-        , webScrapeLatest
-        , webScrapeChapters
-        , webScrapeImages
-        ) =
-        WebInfo
-            { _webDomain = unValue webDomain_
-            , _userInfo = Just $ UserInfo
-                  (fromMaybe [username|user|] $ unValue webUsername)
-                  (unValue webPassword)
-            , _sentinel = unValue webSentinel
-            , _genUrl = unValue webGenUrl
-            , _isLoaded = unValue webIsLoaded
-            , _scrapeComics = unValue webScrapeComics
-            , _scrapeLatest = unValue webScrapeLatest
-            , _scrapeChapters = unValue webScrapeChapters
-            , _scrapeImages = unValue webScrapeImages
-            }
-#if MIN_VERSION_GLASGOW_HASKELL(9,2,0,0)
+            , webUsername
+            , webPassword
+            , webSentinel
+            , webGenUrl
+            , webIsLoaded
+            , webScrapeComics
+            , webScrapeLatest
+            , webScrapeChapters
+            , webScrapeImages
+            ) =
+            WebInfo
+                { _webDomain = unValue webDomain_
+                , _userInfo =
+                    Just $
+                        UserInfo
+                            (fromMaybe [username|user|] $ unValue webUsername)
+                            (unValue webPassword)
+                , _sentinel = unValue webSentinel
+                , _genUrl = unValue webGenUrl
+                , _isLoaded = unValue webIsLoaded
+                , _scrapeComics = unValue webScrapeComics
+                , _scrapeLatest = unValue webScrapeLatest
+                , _scrapeChapters = unValue webScrapeChapters
+                , _scrapeImages = unValue webScrapeImages
+                }
     query = select $ do
         webs <- from $ table @Webs
         where_ $ webs.domain ==. val (url ^?! domain)
@@ -267,27 +237,13 @@ queryWeb url =
             , webs.scrapeChapters
             , webs.scrapeImages
             )
-#else
-    query = select $ do
-        webs <- from $ table @Webs
-        where_ $ webs .^ WebsDomain ==. val (url ^?! domain)
-        pure
-            ( webs .^ WebsDomain
-            , webs .^ WebsUsername
-            , webs .^ WebsPassword
-            , webs .^ WebsSentinel
-            , webs .^ WebsGenUrl
-            , webs .^ WebsIsLoaded
-            , webs .^ WebsScrapeComics
-            , webs .^ WebsScrapeLatest
-            , webs .^ WebsScrapeChapters
-            , webs .^ WebsScrapeImages
-            )
-#endif
+
 
 getNewReleaseComics ::
     (MonadFail m, MonadThrow m, MonadUnliftIO m) =>
-    SessionId -> URI -> Int ->
+    SessionId ->
+    URI ->
+    Int ->
     m [(Comic, URI, ComicInfo)]
 getNewReleaseComics sess webdomain page = do
     webinfo <- queryWeb webdomain
@@ -321,13 +277,12 @@ getNewReleaseComics sess webdomain page = do
 
 queryComics' :: MonadUnliftIO m => [URI] -> m [(Comic, URI, ComicInfo)]
 queryComics' [] = return []
-queryComics' (link:links) =
+queryComics' (link : links) =
     bracket (newSqlBackend defaultDbFile) (liftIO . close') $
         (map unValues <$>) . runSqlConn query
   where
     https_ domain_ path_ = val [uri|https://|] ++. castString domain_ ++. path_
     enval i n = (val n, val i)
-#if MIN_VERSION_GLASGOW_HASKELL(9,2,0,0)
     query = select $ do
         _ :& urls :& comics :& (full_url, idx) <-
             from
@@ -347,27 +302,6 @@ queryComics' (link:links) =
             , full_url
             , (comics.title, comics.folder, comics.volume, comics.chapter)
             )
-#else
-    query = select $ do
-        _ :& urls :& comics :& (full_url, idx) <-
-            from
-                $ ( ( table @Webs `InnerJoin` table @Urls
-                        `on` (\(webs :& urls) -> webs .^ WebsWeb ==. urls .^ UrlsWeb)
-                    )
-                        `InnerJoin` table @Comics
-                        `on` (\(_ :& urls :& comics) -> urls .^ UrlsComic ==. comics .^ ComicsComic)
-                  )
-                    `InnerJoin` from (values $ imap enval $ link :| links)
-                `on` ( \(webs :& urls :& _ :& (full_url, _)) ->
-                        https_ (webs .^ WebsDomain) (urls .^ UrlsPath) ==. full_url
-                     )
-        orderBy [asc idx]
-        pure
-            ( urls .^ UrlsComic
-            , full_url
-            , (comics .^ ComicsTitle, comics .^ ComicsFolder, comics .^ ComicsVolume, comics .^ ComicsChapter)
-            )
-#endif
     unValues (comic, uri_, comicInfo) =
         (unValue comic, unValue uri_, unValues' comicInfo)
       where

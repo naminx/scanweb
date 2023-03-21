@@ -1,14 +1,10 @@
-{-# LANGUAGE CPP #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE OverloadedRecordDot #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE NoImplicitPrelude #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
-
-#if MIN_VERSION_GLASGOW_HASKELL(9,2,0,0)
-{-# LANGUAGE OverloadedRecordDot #-}
-#endif
 
 module Run where
 
@@ -27,23 +23,23 @@ import qualified Data.Text.IO as T (getLine, writeFile)
 import qualified Data.Text.Internal.Search as T (indices)
 import qualified Data.Text.Lazy.IO as TL (writeFile)
 import Data.Tuple (swap)
-import Database.Esqueleto.Experimental (
-    Entity,
-    PersistEntity,
-    PersistField,
-    SqlExpr,
-    SqlQuery,
-    from,
-    runSqlConn,
-    select,
-    transactionSave,
-    transactionUndo,
-    update,
-    val,
-    where_,
-    (=.),
-    (==.),
- )
+import Database.Esqueleto.Experimental
+    ( Entity
+    , PersistEntity
+    , PersistField
+    , SqlExpr
+    , SqlQuery
+    , from
+    , runSqlConn
+    , select
+    , transactionSave
+    , transactionUndo
+    , update
+    , val
+    , where_
+    , (=.)
+    , (==.)
+    )
 import qualified Database.Esqueleto.Experimental as ES
 import Formatting (Format (..), format, (%))
 import Formatting.Combinators (lpadded)
@@ -51,33 +47,33 @@ import Formatting.Formatters (int, text)
 import Lib hiding (domain)
 import qualified Lib as URI
 import Network.HTTP.Client (HttpException)
-import Path (
-    Abs,
-    Dir,
-    File,
-    Path,
-    Rel,
-    SomeBase (..),
-    addExtension,
-    parseAbsFile,
-    parseRelDir,
-    parseRelFile,
-    reldir,
-    toFilePath,
-    (</>),
- )
+import Path
+    ( Abs
+    , Dir
+    , File
+    , Path
+    , Rel
+    , SomeBase (..)
+    , addExtension
+    , parseAbsFile
+    , parseRelDir
+    , parseRelFile
+    , reldir
+    , toFilePath
+    , (</>)
+    )
 import qualified RIO.ByteString.Lazy as BL
 import qualified RIO.Map as Map (fromList, toList)
 import RIO.Partial (succ)
 import RIO.Process (HasProcessContext (..))
 import qualified RIO.Text as T (break, pack, takeWhile, unpack)
-import qualified RIO.Text.Lazy as TL (
-    Text,
-    fromStrict,
-    take,
-    toStrict,
-    unpack,
- )
+import qualified RIO.Text.Lazy as TL
+    ( Text
+    , fromStrict
+    , take
+    , toStrict
+    , unpack
+    )
 import System.Console.ANSI (Color (..))
 import System.Directory (createDirectory, makeAbsolute)
 import System.Random (randomRIO)
@@ -86,34 +82,35 @@ import Text.Megaparsec.Char.Lexer (decimal)
 import Text.Megaparsec.Error (ParseErrorBundle)
 import Text.Pretty.Simple (pPrint)
 import Text.RawString.QQ (r)
-import Text.URI (
-    URI,
-    emptyURI,
-    mkURI,
-    relativeTo,
-    render,
-    renderBs,
-    renderStr,
-    unRText,
- )
-import Text.URI.Lens (
-    authHost,
-    uriAuthority,
-    uriFragment,
-    uriPath,
-    uriQuery,
-    uriScheme,
- )
+import Text.URI
+    ( URI
+    , emptyURI
+    , mkURI
+    , relativeTo
+    , render
+    , renderBs
+    , renderStr
+    , unRText
+    )
+import Text.URI.Lens
+    ( authHost
+    , uriAuthority
+    , uriFragment
+    , uriPath
+    , uriQuery
+    , uriScheme
+    )
 import Web.Api.WebDriver
-    ( ContextId,
-      executeAsyncScript,
-      executeScript,
-      getWindowHandle,
-      getWindowHandles,
-      navigateToStealth,
-      execWebDriverT,
-      WebDriverT,
-      SessionId )
+    ( ContextId
+    , SessionId
+    , WebDriverT
+    , execWebDriverT
+    , executeAsyncScript
+    , executeScript
+    , getWindowHandle
+    , getWindowHandles
+    , navigateToStealth
+    )
 
 
 mkWebTable :: forall s env. (HasStateRef s env, HasApp s) => RIO env ()
@@ -438,15 +435,9 @@ updateComicTableChapter ::
 updateComicTableChapter comic chapter = do
     bracket (currentSqlBackend <%= id) (runSqlConn transactionUndo) $ do
         runSqlConn $ do
-#if MIN_VERSION_GLASGOW_HASKELL(9,2,0,0)
             update $ \row -> do
                 set_ row [ComicsChapter =. val chapter]
                 where_ $ row.comic ==. val comic
-#else
-            update $ \row -> do
-                set_ row [ComicsChapter =. val chapter]
-                where_ $ row .^ ComicsComic ==. val comic
-#endif
             transactionSave
     comicTable . ix comic . _4 .= chapter
 
@@ -460,15 +451,9 @@ updateComicTableVolume ::
 updateComicTableVolume comic volume = do
     sqlBackend <- currentSqlBackend <%= id
     runSql sqlBackend $
-#if MIN_VERSION_GLASGOW_HASKELL(9,2,0,0)
         update $ \row -> do
             set_ row [ComicsVolume =. val volume]
             where_ $ row.comic ==. val comic
-#else
-        update $ \row -> do
-            set_ row [ComicsVolume =. val volume]
-            where_ $ row .^ ComicsComic ==. val comic
-#endif
     comicTable . ix comic . _3 .= volume
 
 
@@ -633,9 +618,9 @@ clickAndScanComic = do
     latestChapUrl <-
         fromRight (throwM LatestChapterNotFound)
             <$> tryAny
-                    ( runWd (executeScript scrapeLatestScript [])
-                        <&> preview (_String . to Just . tryParseURI)
-                    )
+                ( runWd (executeScript scrapeLatestScript [])
+                    <&> preview (_String . to Just . tryParseURI)
+                )
     let newRelease =
             zipWith
                 (liftA2 (,))
@@ -1009,15 +994,9 @@ updateWebTable :: forall env s. (HasStateRef s env, HasApp s) => Web -> URI -> R
 updateWebTable web absUrl = do
     sqlBackend <- currentSqlBackend <%= id
     runSql sqlBackend $
-#if MIN_VERSION_GLASGOW_HASKELL(9,2,0,0)
         update $ \row -> do
             set_ row [WebsSentinel =. val absUrl]
             where_ $ row.web ==. val web
-#else
-        update $ \row -> do
-            set_ row [WebsSentinel =. val absUrl]
-            where_ $ row .^ WebsWeb ==. val web
-#endif
 
 
 selectorAnchor :: URI -> Text

@@ -1,11 +1,11 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE NoImplicitPrelude #-}
 
-module App.Types.ReleaseInfo (
-    ReleaseInfo (..),
-    comicReleaseInfo,
-    mkReleaseInfo,
-) where
+module App.Types.ReleaseInfo
+    ( ReleaseInfo (..)
+    , comicReleaseInfo
+    , mkReleaseInfo
+    ) where
 
 import App.Types.Chapter
 import App.Types.Volume

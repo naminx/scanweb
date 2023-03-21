@@ -3,18 +3,18 @@
 {-# LANGUAGE NoImplicitPrelude #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module App.Types.Path (
-    Path,
-    Rel,
-    Dir,
-) where
+module App.Types.Path
+    ( Path
+    , Rel
+    , Dir
+    ) where
 
-import Database.Esqueleto.Experimental (
-    PersistField (..),
-    PersistFieldSql (..),
-    PersistValue (PersistText),
-    SqlType (SqlString),
- )
+import Database.Esqueleto.Experimental
+    ( PersistField (..)
+    , PersistFieldSql (..)
+    , PersistValue (PersistText)
+    , SqlType (SqlString)
+    )
 import qualified Database.Esqueleto.Internal.Internal as ES (SqlString)
 import Lib
 import Path (Dir, Path, Rel, parseRelDir, toFilePath)

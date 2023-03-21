@@ -3,12 +3,12 @@
 
 module App.Types.Title where
 
-import Database.Esqueleto.Experimental (
-    PersistField (..),
-    PersistFieldSql (..),
-    PersistValue (PersistText),
-    SqlType (SqlString),
- )
+import Database.Esqueleto.Experimental
+    ( PersistField (..)
+    , PersistFieldSql (..)
+    , PersistValue (PersistText)
+    , SqlType (SqlString)
+    )
 import Lib
 import qualified RIO.Text as T (pack)
 

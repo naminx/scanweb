@@ -6,14 +6,14 @@ module Lib.URI where
 
 import Control.Lens (Choice, Traversal', prism', set, (.~), (?~), _Right)
 import RIO hiding (set, (.~))
-import Text.URI (
-    Authority (Authority),
-    RText,
-    RTextLabel (Host),
-    URI,
-    mkURI,
-    render,
- )
+import Text.URI
+    ( Authority (Authority)
+    , RText
+    , RTextLabel (Host)
+    , URI
+    , mkURI
+    , render
+    )
 import Text.URI.Lens (authHost, uriAuthority, uriScheme)
 import Text.URI.QQ (scheme)
 

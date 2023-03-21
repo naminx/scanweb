@@ -13,12 +13,12 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE NoImplicitPrelude #-}
 
-module Lib.Extra (
-    Try,
-    exclude,
-    maybeToTry,
-    sequencePair,
-) where
+module Lib.Extra
+    ( Try
+    , exclude
+    , maybeToTry
+    , sequencePair
+    ) where
 
 import Data.Either.Extra (maybeToEither)
 import RIO

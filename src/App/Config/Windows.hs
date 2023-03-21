@@ -1,23 +1,25 @@
 {-# LANGUAGE CPP #-}
+#if defined(mingw32_HOST_OS)
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE QuasiQuotes #-}
+#else
+#endif
 {-# LANGUAGE NoImplicitPrelude #-}
 
 module App.Config.Windows where
 
-
 #if defined(mingw32_HOST_OS)
 
-import Path (
-    Abs,
-    Dir,
-    File,
-    Path,
-    absdir,
-    absfile,
-    fromAbsDir,
-    fromAbsFile,
- )
+import Path
+    ( Abs
+    , Dir
+    , File
+    , Path
+    , absdir
+    , absfile
+    , fromAbsDir
+    , fromAbsFile
+    )
 import RIO
 
 

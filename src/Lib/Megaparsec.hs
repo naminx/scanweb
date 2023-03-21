@@ -14,10 +14,10 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE NoImplicitPrelude #-}
 
-module Lib.Megaparsec (
-    TextParser,
-    parseEither,
-) where
+module Lib.Megaparsec
+    ( TextParser
+    , parseEither
+    ) where
 
 import RIO
 import Text.Megaparsec (Parsec, eof, runParser)
